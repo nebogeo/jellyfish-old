@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <color name="bg">#aaaaaa</color>
+  <color name="text">#000000</color>
+  <color name="buttonbg">#ffffff</color>
+
+  <style name="StarwispButton" parent="android:style/Widget.Button">
+    <item name="android:textColor">@color/text</item>
+    <item name="android:textSize">50sp</item>
+    <item name="android:layout_margin">10dip</item>
+    <item name="android:background">@drawable/swarmbutton</item>
+  </style>
+
+  <style name="StarwispSpinnerItem" parent="android:Widget.TextView.SpinnerItem">
+<!--    <item name="android:textAppearance">@style/StarwispTextAppearanceSpinnerItem</item> -->
+    <item name="android:background">@drawable/swarmspinner</item>
+    <item name="android:textSize">30sp</item>
+  </style>
+
+  <style name="StarwispTextAppearanceSpinnerItem" parent="android:TextAppearance.Widget.TextView.SpinnerItem">
+    <item name="android:textColor">@color/text</item>
+    <item name="android:textSize">30sp</item>
+  </style>
+
+
+  <style name="StarwispSpinner" parent="android:style/Widget.Spinner">
+    <item name="android:textColor">@color/text</item>
+    <item name="android:background">@drawable/swarmspinner</item>
+  </style>
+
+  <style name="StarwispSeekBar" parent="android:style/Widget.SeekBar">
+    <item name="android:progressDrawable">@drawable/seekprogress</item>
+    <item name="android:thumb">@drawable/seekthumb</item>
+  </style>
+
+  <style name="StarwispTheme" parent="android:Theme.Light">
+    <item name="android:textColor">@color/text</item>
+    <item name="android:textColorLink">#005500</item>
+    <item name="android:windowBackground">@drawable/bg_style</item>
+    <item name="android:colorBackground">@color/bg</item>
+    <item name="android:buttonStyle">@style/StarwispButton</item>
+    <item name="android:seekBarStyle">@style/StarwispSeekBar</item>
+    <item name="android:spinnerItemStyle">@style/StarwispSpinnerItem</item>
+    <item name="android:spinnerStyle">@style/StarwispSpinner</item>
+  </style>
+
+
+</resources>
