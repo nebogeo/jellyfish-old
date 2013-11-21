@@ -56,9 +56,9 @@ public class starwisp extends StarwispActivity
 {
     static {
         // register all activities here
-        ActivityManager.Register("main",starwisp.class);
-        ActivityManager.Register("instr-buttons",InstrButtonsActivity.class);
-        ActivityManager.Register("float-value",FloatValueActivity.class);
+        ActivityManager.RegisterActivity("main",starwisp.class);
+        ActivityManager.RegisterActivity("instr-buttons",InstrButtonsActivity.class);
+        ActivityManager.RegisterActivity("float-value",FloatValueActivity.class);
     };
 
     NetworkManager nm;

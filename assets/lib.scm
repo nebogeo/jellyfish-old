@@ -13,6 +13,29 @@
 ;; You should have received a copy of the GNU Affero General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; debugging and unit tests
+
+(define (msg . args)
+  (for-each
+   (lambda (i) (display i)(display " "))
+   args)
+  (newline))
+
+(define (dbg i) (msg i) i)
+
+(define (assert msg v)
+  (display (string-append "testing " msg))(newline)
+  (when (not v)
+        (error "unit " msg)))
+
+(define (asserteq msg a b)
+  (display (string-append "testing " msg))(newline)
+  (when (not (equal? a b))
+        (error "unit " msg a b)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; list stuff
 
 (define (filter fn l)
   (foldl
@@ -27,17 +50,130 @@
       (insert (car lst) fn
               (sort (cdr lst) fn))))
 
-
 (define (find n l)
   (cond
     ((null? l) #f)
     ((equal? n (car (car l))) (car l))
     (else (find n (cdr l)))))
 
+(define (findv n l)
+  (cond
+    ((null? l) #f)
+    ((eqv? n (car (car l))) (car l))
+    (else (findv n (cdr l)))))
 
-(define (error . args)
-  (display (apply string-append args))(newline))
+(define (sorted-add l i)
+  (cond
+   ((null? l) (list i))
+   ;; overwrite existing
+   ((equal? (car i) (caar l)) (cons i (cdr l)))
+   ((string<? (car i) (caar l))
+    (cons i l))
+   (else
+    (cons (car l) (sorted-add (cdr l) i)))))
 
+(define (sorted-find l k)
+  (define (_ bot top)
+    (if (null? l) #f
+        (let* ((m (inexact->exact (floor (+ bot (/ (- top bot) 2)))))
+               (mid (list-ref l m))
+               (v (car mid)))
+          (cond
+           ((equal? k v) mid)
+           ((eqv? top bot) #f)
+           ((string<? k v) (_ bot m))
+           (else (_ (+ m 1) top))))))
+  (_ 0 (- (length l) 1)))
+
+(define (sorted-addv l i)
+  (cond
+   ((null? l) (list i))
+   ;; overwrite existing
+   ((eqv? (car i) (caar l)) (cons i (cdr l)))
+   ((< (car i) (caar l))
+    (cons i l))
+   (else
+    (cons (car l) (sorted-addv (cdr l) i)))))
+
+(define (sorted-findv l k)
+  (define (_ bot top)
+    (if (null? l) #f
+        (let* ((m (inexact->exact (floor (+ bot (/ (- top bot) 2)))))
+               (mid (list-ref l m))
+               (v (car mid)))
+          (cond
+           ((eqv? k v) mid)
+           ((eqv? top bot) #f)
+           ((< k v) (_ bot m))
+           (else (_ (+ m 1) top))))))
+  (_ 0 (- (length l) 1)))
+
+; utils funcs for using lists as sets
+(define (set-remove a l)
+  (cond
+   ((null? l) '())
+   (else
+    (if (eqv? (car l) a)
+        (set-remove a (cdr l))
+        (cons (car l) (set-remove a (cdr l)))))))
+
+(define (set-add a l)
+  (if (not (memv a l))
+      (cons a l) l))
+
+(define (set-contains a l)
+  (if (not (memq a l)) #f #t))
+
+
+(define (build-list fn n)
+  (define (_ fn n l)
+    (cond ((zero? n) l)
+          (else
+           (_ fn (- n 1) (cons (fn (- n 1)) l)))))
+  (_ fn n '()))
+
+(define (foldl op initial seq)
+  (define (iter result rest)
+    (if (null? rest)
+        result
+        (iter (op (car rest) result) (cdr rest))))
+  (iter initial seq))
+
+(define (insert-to i p l)
+  (cond
+   ((null? l) (list i))
+   ((zero? p) (cons i l))
+   (else
+    (cons (car l) (insert-to i (- p 1) (cdr l))))))
+
+;; (list-replace '(1 2 3 4) 2 100) => '(1 2 100 4)
+(define (list-replace l i v)
+  (cond
+    ((null? l) l)
+    ((zero? i) (cons v (list-replace (cdr l) (- i 1) v)))
+    (else (cons (car l) (list-replace (cdr l) (- i 1) v)))))
+
+(define (insert elt fn sorted-lst)
+  (if (null? sorted-lst)
+      (list elt)
+      (if (fn elt (car sorted-lst))
+          (cons elt sorted-lst)
+          (cons (car sorted-lst)
+                (insert elt fn (cdr sorted-lst))))))
+
+(define (choose l)
+  (list-ref l (abs (random (- (length l) 1)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; time
+
+(define (time->seconds t)
+   (+ (car t) (/ (cadr t) 1000000)))
+
+(define start-time (time->seconds (time)))
+
+(define (time-now)
+  (- (time->seconds (time)) start-time))
 
 ;; just for graph so don't have to be accurate!!!
 (define (date->day d)
@@ -68,67 +204,7 @@
    "/"
    (number->string (list-ref d 2))))
 
-
-(define centre-layout (layout 'wrap-content 'wrap-content 1 'centre))
-
-
-(define (insert elt fn sorted-lst)
-  (if (null? sorted-lst)
-      (list elt)
-      (if (fn elt (car sorted-lst))
-          (cons elt sorted-lst)
-          (cons (car sorted-lst)
-                (insert elt fn (cdr sorted-lst))))))
-
-;; utils funcs for using lists as sets
-
-(define (set-remove a l)
-  (if (null? l)
-      '()
-      (if (eq? (car l) a)
-          (set-remove a (cdr l))
-          (cons (car l) (set-remove a (cdr l))))))
-
-(define (set-add a l)
-  (if (not (memq a l))
-      (cons a l)
-      l))
-
-(define (set-contains a l)
-  (if (not (memq a l))
-      #f
-      #t))
-
-;; missing list stuff
-
-(define (build-list fn n)
-  (define (_ fn n l)
-    (cond ((zero? n) l)
-          (else
-           (_ fn (- n 1) (cons (fn (- n 1)) l)))))
-  (_ fn n '()))
-
-(define (foldl op initial seq)
-  (define (iter result rest)
-    (if (null? rest)
-        result
-        (iter (op (car rest) result) (cdr rest))))
-  (iter initial seq))
-
-(define (insert-to i p l)
-  (cond
-   ((null? l) (list i))
-   ((zero? p) (cons i l))
-   (else
-    (cons (car l) (insert-to i (- p 1) (cdr l))))))
-
-;; (list-replace '(1 2 3 4) 2 100) => '(1 2 100 4)
-(define (list-replace l i v)
-  (cond
-    ((null? l) l)
-    ((zero? i) (cons v (list-replace (cdr l) (- i 1) v)))
-    (else (cons (car l) (list-replace (cdr l) (- i 1) v)))))
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; random
 
 (define random-maker
@@ -226,7 +302,68 @@
     (if (> (vdot n v) 0)
         v
         (loop (hsrndvec)))))
-                                        ;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (string-split str . rest)
+		; maxsplit is a positive number
+  (define (split-by-whitespace str maxsplit)
+    (define (skip-ws i yet-to-split-count)
+      (cond
+        ((>= i (string-length str)) '())
+        ((char-whitespace? (string-ref str i))
+          (skip-ws (+ 1 i) yet-to-split-count))
+        (else (scan-beg-word (+ 1 i) i yet-to-split-count))))
+    (define (scan-beg-word i from yet-to-split-count)
+      (cond
+        ((zero? yet-to-split-count)
+          (cons (substring str from (string-length str)) '()))
+        (else (scan-word i from yet-to-split-count))))
+    (define (scan-word i from yet-to-split-count)
+      (cond
+        ((>= i (string-length str))
+          (cons (substring str from i) '()))
+        ((char-whitespace? (string-ref str i))
+          (cons (substring str from i)
+            (skip-ws (+ 1 i) (- yet-to-split-count 1))))
+        (else (scan-word (+ 1 i) from yet-to-split-count))))
+    (skip-ws 0 (- maxsplit 1)))
+
+		; maxsplit is a positive number
+		; str is not empty
+  (define (split-by-charset str delimeters maxsplit)
+    (define (scan-beg-word from yet-to-split-count)
+      (cond
+        ((>= from (string-length str)) '(""))
+        ((zero? yet-to-split-count)
+          (cons (substring str from (string-length str)) '()))
+        (else (scan-word from from yet-to-split-count))))
+    (define (scan-word i from yet-to-split-count)
+      (cond
+        ((>= i (string-length str))
+          (cons (substring str from i) '()))
+        ((memv (string-ref str i) delimeters)
+          (cons (substring str from i)
+            (scan-beg-word (+ 1 i) (- yet-to-split-count 1))))
+        (else (scan-word (+ 1 i) from yet-to-split-count))))
+    (scan-beg-word 0 (- maxsplit 1)))
+
+			; resolver of overloading...
+			; if omitted, maxsplit defaults to
+			; (inc (string-length str))
+  (if (equal? str "") '()
+    (if (null? rest)
+      (split-by-whitespace str (+ 1 (string-length str)))
+      (let ((charset (car rest))
+          (maxsplit
+            (if (pair? (cdr rest)) (cadr rest) (+ 1 (string-length str)))))
+        (cond
+          ((not (positive? maxsplit)) '())
+          ((null? charset) (split-by-whitespace str maxsplit))
+          (else (split-by-charset str charset maxsplit))))))
+  )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; convert scheme values into equivilent json strings
 
 (define (scheme->json v)
@@ -270,117 +407,78 @@
                                   "\n" token ": " value))))))
   (string-append "{" (_ l "") "\n" "}"))
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; android ui
 
-(define (layout width height weight gravity) (list "layout" width height weight gravity))
+(define (layout width height weight gravity margin) (list "layout" width height weight gravity margin))
 (define (layout-width l) (list-ref l 1))
 (define (layout-height l) (list-ref l 2))
 (define (layout-weight l) (list-ref l 3))
 (define (layout-gravity l) (list-ref l 4))
+(define (layout-margin l) (list-ref l 5))
+
+(define centre-layout (layout 'wrap-content 'wrap-content 1 'centre 0))
 
 (define (widget-type w) (list-ref w 0))
 (define (widget-id w) (list-ref w 1))
 
-(define (linear-layout id orientation layout children)
-  (list "linear-layout" id orientation layout children))
-(define (linear-layout-id t) (list-ref t 1))
-(define (linear-layout-orientation t) (list-ref t 2))
-(define (linear-layout-layout t) (list-ref t 3))
-(define (linear-layout-children t) (list-ref t 4))
-
+;; all the widgets!
+(define (linear-layout id orientation layout colour children)
+  (list "linear-layout" id orientation layout colour children))
+(define (linear-layout-children t) (list-ref t 5))
 (define (frame-layout id layout children)
   (list "frame-layout" id layout children))
-(define (frame-layout-id t) (list-ref t 1))
-(define (frame-layout-layout t) (list-ref t 2))
 (define (frame-layout-children t) (list-ref t 3))
-
 (define (scroll-view id layout children)
   (list "scroll-view" id layout children))
-(define (scroll-view-id t) (list-ref t 1))
-(define (scroll-view-layout t) (list-ref t 2))
+(define (scroll-view-vert id layout children)
+  (list "scroll-view-vert" id layout children))
 (define (scroll-view-children t) (list-ref t 3))
-
+(define (view-pager id layout fragment-list)
+  (list "view-pager" id layout fragment-list))
 (define (space layout) (list "space" "999" layout))
 (define (space-view-layout t) (list-ref t 2))
-
 (define (image-view id image layout) (list "image-view" id image layout))
-(define (image-view-id t) (list-ref t 1))
-(define (image-view-image t) (list-ref t 2))
-(define (image-view-layout t) (list-ref t 3))
-
 (define (camera-preview id layout) (list "camera-preview" id layout))
-(define (camera-preview-id t) (list-ref t 1))
-(define (camera-preview-layout t) (list-ref t 2))
-
 (define (text-view id text size layout) (list "text-view" id text size layout))
-(define (text-view-left id text size layout) (list "text-view" id text size layout "left"))
-(define (text-view-id t) (list-ref t 1))
-(define (text-view-text t) (list-ref t 2))
-(define (text-view-modify-text t v) (list-replace t 2 v))
-(define (text-view-size t) (list-ref t 3))
-(define (text-view-layout t) (list-ref t 4))
-
+(define (debug-text-view id text size layout) (list "debug-text-view" id text size layout))
 (define (web-view id data layout) (list "web-view" id data layout))
-(define (web-view-id t) (list-ref t 1))
-(define (web-view-text t) (list-ref t 2))
-(define (web-view-modify-text t v) (list-replace t 2 v))
-(define (web-view-layout t) (list-ref t 3))
-
-(define (edit-text id text size layout listener) (list "edit-text" id text size layout listener))
-(define (edit-text-id t) (list-ref t 1))
-(define (edit-text-text t) (list-ref t 2))
-(define (edit-text-modify-text t v) (list-replace t 2 v))
-(define (edit-text-size t) (list-ref t 3))
-(define (edit-text-layout t) (list-ref t 4))
-(define (edit-text-listener t) (list-ref t 5))
-
+(define (edit-text id text size type layout listener) (list "edit-text" id text size type layout listener))
+(define (edit-text-listener t) (list-ref t 6))
 (define (button id text text-size layout listener) (list "button" id text text-size layout listener))
-(define (button-id t) (list-ref t 1))
-(define (button-text t) (list-ref t 2))
-(define (button-modify-text t v) (list-replace t 2 v))
-(define (button-text-size t) (list-ref t 3))
-(define (button-layout t) (list-ref t 4))
 (define (button-listener t) (list-ref t 5))
-
 (define (toggle-button id text text-size layout listener) (list "toggle-button" id text text-size layout listener))
-(define (toggle-button-id t) (list-ref t 1))
-(define (toggle-button-text t) (list-ref t 2))
-(define (toggle-button-modify-text t v) (list-replace t 2 v))
-(define (toggle-button-text-size t) (list-ref t 3))
-(define (toggle-button-layout t) (list-ref t 4))
 (define (toggle-button-listener t) (list-ref t 5))
-
 (define (seek-bar id max layout listener) (list "seek-bar" id max layout listener))
-(define (seek-bar-id t) (list-ref t 1))
-(define (seek-bar-max t) (list-ref t 2))
-(define (seek-bar-layout t) (list-ref t 3))
 (define (seek-bar-listener t) (list-ref t 4))
-
 (define (spinner id items layout listener) (list "spinner" id items layout listener))
-(define (spinner-id t) (list-ref t 1))
-(define (spinner-items t) (list-ref t 2))
-(define (spinner-layout t) (list-ref t 3))
 (define (spinner-listener t) (list-ref t 4))
-
 (define (canvas id layout drawlist) (list "canvas" id layout drawlist))
-(define (canvas-id t) (list-ref t 1))
-(define (canvas-layout t) (list-ref t 2))
 (define (canvas-drawlist t) (list-ref t 3))
+(define (button-grid id type height textsize layout buttons listener)
+  (list "button-grid" id type height textsize layout buttons listener))
+(define (button-grid-listener b) (list-ref b 7))
+(define (drawlist-line colour width points) (list "line" colour width points))
+(define (drawlist-text text x y colour size align) (list "text" text x y colour size align))
 
 (define (nomadic id layout listener) (list "nomadic" id layout listener))
 (define (nomadic-id t) (list-ref t 1))
 (define (nomadic-layout t) (list-ref t 2))
 (define (nomadic-listener t) (list-ref t 3))
 
-(define (drawlist-line colour width points) (list "line" colour width points))
-(define (drawlist-text text x y colour size align) (list "text" text x y colour size align))
 
 (define (toast msg) (list "toast" 0 "toast" msg))
 (define (make-directory name) (list "make-directory" 0 "make-directory" name))
 ;; treat this like a dialog so the callback fires
 (define (list-files name path fn) (list "list-files" 0 "list-files" name fn path))
+(define (delayed name delay fn) (list "delayed" 0 "delayed" name fn delay))
+(define (network-connect name ssid fn) (list "network-connect" 0 "network-connect" name fn ssid))
+(define (http-request name url fn) (list "http-request" 0 "http-request" name fn url))
+(define (http-download name url filename) (list "http-download" 0 "http-download" name filename url))
 (define (send-mail to subject body attachments) (list "send-mail" 0 "send-mail" to subject body attachments))
+
+(define (dialog-fragment id layout fragment-name fn)
+  (list "dialog-fragment" 0 "dialog-fragment" id layout fragment-name fn))
 
 (define (time-picker-dialog name fn)
   (list "time-picker-dialog" 0 "time-picker-dialog" name fn))
@@ -396,57 +494,150 @@
 (define (start-activity-goto act request arg) (list "start-activity" 0 "start-activity-goto" act arg))
 (define (finish-activity result) (list "finish-activity" 0 "finish-activity" result))
 
+(define (build-fragment type id layout) (list "build-fragment" type id layout))
+(define (replace-fragment id type) (list "replace-fragment" id type))
+
 (define (update-widget type id token value) (list type id token value))
+(define (update-widget-type l) (list-ref l 0))
+(define (update-widget-id l) (list-ref l 1))
+(define (update-widget-token l) (list-ref l 2))
+(define (update-widget-value l) (list-ref l 3))
 
 (define id-map ())
 (define current-id 1)
 
-(define (find-id name id-map)
-  (cond
-   ((null? id-map) #f)
-   ((equal? name (car (car id-map))) (cadr (car id-map)))
-   (else (find-id name (cdr id-map)))))
+;(define (find-id name id-map)
+;  (cond
+;   ((null? id-map) #f)
+;   ((equal? name (car (car id-map))) (cadr (car id-map)))
+;   (else (find-id name (cdr id-map)))))
 
-(define (get-id name)
-  (find-id name id-map))
+;(define (get-id name)
+;  (find-id name id-map))
 
 ;(define (make-id name)
-;  (set! id-map (cons (list name (length id-map)) id-map))
-;  (get-id name))
+;  (let ((existing (get-id name)))
+;    (cond
+;     (existing existing)
+;     (else
+;      (set! id-map (cons (list name current-id) id-map))
+;      (set! current-id (+ current-id 1))
+;      (get-id name)))))
+
+;(define (get-id name)
+;  (cadr (sorted-find id-map name)))
+
+;(define (make-id name)
+;  (prof-start "make-id")
+;  (prof-start "make-id sorted find")
+;  (let ((sf (sorted-find id-map name)))
+;    (prof-end "make-id sorted find")
+;    (let ((r (if (not sf)
+;                 (let ((id current-id))
+;                   (prof-start "make-id sorted add")
+;                   (set! id-map (sorted-add id-map (list name id)))
+ ;                  (prof-end "make-id sorted add")
+;                   (set! current-id (+ current-id 1))
+;                   id)
+;                 (cadr sf))))
+;      (prof-end "make-id")
+;      r)))
+
+(define (get-id name)
+  (id-map-get name))
 
 (define (make-id name)
-  (let ((existing (get-id name)))
+  (let ((id (id-map-get name)))
     (cond
-     (existing existing)
-     (else
-      (set! id-map (cons (list name current-id) id-map))
+     ((zero? id)
+     ; (prof-start "make-id")
+      (id-map-add name current-id)
       (set! current-id (+ current-id 1))
-      (get-id name)))))
+     ; (prof-end "make-id")
+      (- current-id 1))
+     (else id))))
 
+(define prof-map '())
 
-(define wrap (layout 'wrap-content 'wrap-content 1 'left))
-(define fillwrap (layout 'fill-parent 'wrap-content 1 'left))
-(define wrapfill (layout 'wrap-content 'fill-parent 1 'left))
-(define fill (layout 'fill-parent 'fill-parent 1 'left))
+(define (new-prof-item id)
+  (list id (time-now) 0 0))
+(define (prof-item-id p) (list-ref p 0))
+(define (prof-item-time p) (list-ref p 1))
+(define (prof-item-accum p) (list-ref p 2))
+(define (prof-item-calls p) (list-ref p 3))
 
-(define (spacer size) (space (layout 'fill-parent size 1 'left)))
+(define (prof-item-restart p)
+  (list
+   (prof-item-id p)
+   (time-now)
+   (prof-item-accum p)
+   (prof-item-calls p)))
+
+(define (prof-item-end p)
+  (list
+   (prof-item-id p)
+   0
+   (+ (prof-item-accum p)
+      (- (time-now) (prof-item-time p)))
+   (+ (prof-item-calls p) 1)))
+
+(define (prof-start id)
+  (let ((dd (sorted-find prof-map id)))
+    (if dd
+        (set! prof-map
+              (sorted-add
+               prof-map (prof-item-restart dd)))
+        (set! prof-map
+              (sorted-add
+               prof-map (new-prof-item id))))))
+
+(define (prof-end id)
+  (let ((d (sorted-find prof-map id)))
+    (set! prof-map
+          (sorted-add
+           prof-map
+           (prof-item-end d)))))
+
+(define (prof-print)
+  (let ((tot (foldl
+              (lambda (d r)
+                (+ (prof-item-accum d) r))
+              0 prof-map)))
+    (for-each
+     (lambda (d)
+       (msg (prof-item-id d)
+            (prof-item-calls d)
+             (prof-item-accum d)
+             (* (/ (prof-item-accum d) tot) 100) "%"))
+     prof-map)))
+
+(define wrap (layout 'wrap-content 'wrap-content 1 'left 0))
+(define fillwrap (layout 'fill-parent 'wrap-content 1 'left 0))
+(define wrapfill (layout 'wrap-content 'fill-parent 1 'left 0))
+(define fill (layout 'fill-parent 'fill-parent 1 'left 0))
+
+(define (spacer size) (space (layout 'fill-parent size 1 'left 0)))
+
 
 (define (horiz . l)
   (linear-layout
-   (make-id "h")
-   'horizontal
-   (layout 'fill-parent 'fill-parent 1 'left)
+   0 'horizontal
+   (layout 'fill-parent 'fill-parent 1 'left 0)
+   (list 0 0 0 0)
    l))
 
 (define (vert . l)
   (linear-layout
-   (make-id "v")
-   'vertical
-   (layout 'fill-parent 'fill-parent 1 'left)
+   0 'vertical
+   (layout 'fill-parent 'fill-parent 1 'left 0)
+   (list 0 0 0 0)
    l))
 
 (define (activity name layout on-create on-start on-resume on-pause on-stop on-destroy on-activity-result)
   (list name layout on-create on-start on-resume on-pause on-stop on-destroy on-activity-result))
+
+(define (fragment name layout on-create on-start on-resume on-pause on-stop on-destroy)
+  (list name layout on-create on-start on-resume on-pause on-stop on-destroy))
 
 (define (activity-name a) (list-ref a 0))
 (define (activity-layout a) (list-ref a 1))
@@ -467,43 +658,76 @@
    ((equal? (activity-name (car l)) name) (car l))
    (else (activity-list-find (cdr l) name))))
 
-(define (widget-find widget-list id)
+(define activities 0)
+(define fragments 0)
+
+(define callbacks '())
+(define (callback id type fn) (list id type fn))
+(define (callback-id l) (list-ref l 0))
+(define (callback-type l) (list-ref l 1))
+(define (callback-fn l) (list-ref l 2))
+(define (find-callback id) (sorted-findv callbacks id))
+(define (add-callback! cb)
+  ;;(msg "adding" cb)
+  (set! callbacks (sorted-addv callbacks cb)))
+
+(define (widget-get-children w)
+  (cond
+   ((equal? (widget-type w) "linear-layout") (linear-layout-children w))
+   ((equal? (widget-type w) "frame-layout") (frame-layout-children w))
+   ((equal? (widget-type w) "scroll-view") (scroll-view-children w))
+;;   ((equal? (widget-type w) "grid-layout") (grid-layout-children w))
+   (else '())))
+
+(define (widget-get-callback w)
+  (cond
+   ((equal? (widget-type w) "edit-text") (edit-text-listener w))
+   ((equal? (widget-type w) "button") (button-listener w))
+   ((equal? (widget-type w) "toggle-button") (toggle-button-listener w))
+   ((equal? (widget-type w) "seek-bar") (seek-bar-listener w))
+   ((equal? (widget-type w) "spinner") (spinner-listener w))
+   ((equal? (widget-type w) "button-grid") (button-grid-listener w))
+   ((equal? (widget-type w) "nomadic") (nomadic-listener w))
+   (else #f)))
+
+;; walk through activity stripping callbacks
+;; version called from on-create
+(define (update-callbacks! widget-list)
   (cond
    ((null? widget-list) #f)
-   ((eqv? (widget-id (car widget-list)) id) (car widget-list))
-   ((equal? (widget-type (car widget-list)) "linear-layout")
-    (let ((ret (widget-find (linear-layout-children (car widget-list)) id)))
-      (if ret ret (widget-find (cdr widget-list) id))))
-   ((equal? (widget-type (car widget-list)) "frame-layout")
-    (let ((ret (widget-find (frame-layout-children (car widget-list)) id)))
-      (if ret ret (widget-find (cdr widget-list) id))))
-   ((equal? (widget-type (car widget-list)) "scroll-view")
-    (let ((ret (widget-find (scroll-view-children (car widget-list)) id)))
-      (if ret ret (widget-find (cdr widget-list) id))))
-   (else (widget-find (cdr widget-list) id))))
+   (else
+    (let* ((w (car widget-list))
+           (c (widget-get-children w)))
+      (if (not (null? c))
+          (update-callbacks! c)
+          (let ((cb (widget-get-callback w)))
+            (when cb (add-callback! (callback (widget-id w) (widget-type w) cb))))))
+    (update-callbacks! (cdr widget-list)))))
 
-(define root 0)
-(define dynamic-widgets '())
+;; walk through update stripping callbacks
+;; version called with update-widgets (after on-create version above)
+(define (update-callbacks-from-update! widget-list)
+  (if (null? widget-list) #f
+      (let ((w (car widget-list)))
+        (cond
+         ((null? w) #f)
+         ;; drill deeper
+         ((eq? (update-widget-token w) 'contents)
+          (update-callbacks! (update-widget-value w)))
+         ((eq? (update-widget-token w) 'grid-buttons)
+          (add-callback! (callback (update-widget-id w)
+                                   "button-grid"
+                                   (list-ref (update-widget-value w) 5)))))
+        (update-callbacks-from-update! (cdr widget-list)))))
 
 (define (define-activity-list . args)
-  (set! root (activity-list args)))
+  (set! activities (activity-list args)))
 
-;; hack for dynamic widgets
-(define (add-new-widget! w)
-  ;; todo - when to clear out?
-  (when (not (widget-find dynamic-widgets (widget-id w)))
-        ;;(display "adding widget ")(display w)(newline)
-        (set! dynamic-widgets (cons w dynamic-widgets))))
+(define (define-fragment-list . args)
+  (set! fragments (activity-list args)))
 
-(define (update-dynamic-widgets! events)
-  (for-each
-   (lambda (event)
-     (if (equal? (list-ref event 2) 'contents)
-         (for-each
-          (lambda (w)
-            (add-new-widget! w))
-          (list-ref event 3))))
-   events))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; replace with new cb system
 
 (define dialogs '())
 
@@ -513,11 +737,22 @@
    ((equal? (dialog-name (car dl)) name) (car dl))
    (else (dialog-find (cdr dl) name))))
 
+(define (dialog-replace dl name d)
+  (cond
+   ((null? dl) (list d))
+   ((equal? (dialog-name (car dl)) name)
+    (cons d (cdr dl)))
+   (else (cons (car dl) (dialog-replace (cdr dl) name d)))))
+
+
 (define (add-new-dialog! d)
+  (set! dialogs (dialog-replace dialogs (dialog-name d) d))
   ;; todo - when to clear out?
-  (when (not (dialog-find dialogs (dialog-name d)))
+  ;;(when (not (dialog-find dialogs (dialog-name d)))
         ;;(display "adding dialog ")(display d)(newline)
-        (set! dialogs (cons d dialogs))))
+  ;;      (set! dialogs (cons d dialogs)))
+  )
+
 
 (define (update-dialogs! events)
   (when (list? events)
@@ -527,62 +762,93 @@
                   ;; todo - something a bit more fancy
                   (equal? (list-ref event 0) "date-picker-dialog")
                   (equal? (list-ref event 0) "alert-dialog")
-                  (equal? (list-ref event 0) "list-files"))
+                  (equal? (list-ref event 0) "list-files")
+                  (equal? (list-ref event 0) "http-request")
+                  (equal? (list-ref event 0) "network-connect")
+                  (equal? (list-ref event 0) "delayed"))
                  (add-new-dialog! event)))
          events)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (dialog-callback name args)
   (let ((dialog (dialog-find dialogs name)))
     (if (not dialog)
         (begin (display "no dialog called ")(display name)(newline))
-        (send (scheme->json (apply (dialog-fn dialog) args))))))
+        (let ((events (apply (dialog-fn dialog) args)))
+          (update-dialogs! events)
+          (send (scheme->json events))))))
 
 ;; called by java
 (define (activity-callback type activity-name args)
-  ;;(display "activity-callback ")(display type)(display " ")(display args)(newline)
-  (let ((activity (activity-list-find root activity-name)))
-    (if (not activity)
-        (begin (display "no activity called ")(display activity-name)(newline))
-        (let ((ret (cond
-                    ;; todo update activity...?
-                    ((eq? type 'on-create) ((activity-on-create activity) activity (car args)))
-                    ((eq? type 'on-start) ((activity-on-start activity) activity (car args)))
-                    ((eq? type 'on-stop) ((activity-on-stop activity) activity))
-                    ((eq? type 'on-resume) ((activity-on-resume activity) activity))
-                    ((eq? type 'on-pause) ((activity-on-pause activity) activity))
-                    ((eq? type 'on-destroy) ((activity-on-destroy activity) activity))
-                    ((eq? type 'on-activity-result) ((activity-on-activity-result activity) activity (car args) (cadr args)))
-                    (else
-                     (display "no callback called ")(display type)(newline)
-                     '()))))
-          (when (not (eq? type 'on-create))
-                (update-dynamic-widgets! ret))
-          (send (scheme->json ret))))))
+  ;;(prof-start "activity-callback")
+  (let ((r (let ((activity (activity-list-find activities activity-name)))
+             (top-callback type activity-name activity args))))
+    ;;  (prof-end "activity-callback")
+    r))
 
 ;; called by java
+(define (fragment-callback type fragment-name args)
+  ;;(prof-start "activity-callback")
+  (let ((r (let ((fragment (activity-list-find fragments fragment-name)))
+             (top-callback type fragment-name fragment args))))
+  ;;  (prof-end "activity-callback")
+    r))
+
+(define (top-callback type activity-name activity args)
+  ;;(display "activity-callback ")(display type)(display " ")(display args)(newline)
+  (if (not activity)
+      (begin (display "no activity/fragment called ")(display activity-name)(newline))
+      (let ((ret (cond
+                  ;; todo update activity...?
+                  ((eq? type 'on-create) ((activity-on-create activity) activity (car args)))
+                  ((eq? type 'on-start) ((activity-on-start activity) activity (car args)))
+                  ((eq? type 'on-stop) ((activity-on-stop activity) activity))
+                  ((eq? type 'on-resume) ((activity-on-resume activity) activity))
+                  ((eq? type 'on-pause) ((activity-on-pause activity) activity))
+                  ((eq? type 'on-destroy) ((activity-on-destroy activity) activity))
+                  ((eq? type 'on-activity-result) ((activity-on-activity-result activity) activity (car args) (cadr args)))
+                  (else
+                   (display "no callback called ")(display type)(newline)
+                   '()))))
+        (cond
+         ((eq? type 'on-create)
+          (update-callbacks! (list ret)))
+         (else
+          (update-dialogs! ret)
+          (update-callbacks-from-update! ret)))
+        (send (scheme->json ret)))))
+
+(define (find-activity-or-fragment name)
+  (let ((r (activity-list-find activities name)))
+    (if r r
+        (activity-list-find fragments name))))
+
 (define (widget-callback activity-name widget-id args)
-  (let ((activity (activity-list-find root activity-name)))
-    (if (not activity)
-        (begin (display "no activity called ")(display activity-name)(newline))
-        (let ((widget (widget-find (cons (activity-layout activity) dynamic-widgets) widget-id)))
-          (display "callback runing:") (display widget)(newline)
-          (if (not widget)
-              (begin (display "no widget ")(display widget-id)(display " in ")(display activity-name)(newline))
-              (let ((events
-                     (cond
-                      ((equal? (widget-type widget) "edit-text")
-                       ((edit-text-listener widget) (car args)))
-                      ((equal? (widget-type widget) "button")
-                       ((button-listener widget)))
-                      ((equal? (widget-type widget) "toggle-button")
-                       ((button-listener widget (car args))))
-                      ((equal? (widget-type widget) "seek-bar")
-                       ((seek-bar-listener widget) (car args)))
-                      ((equal? (widget-type widget) "spinner")
-                       ((spinner-listener widget) (car args)))
-                      ((equal? (widget-type widget) "nomadic")
-                       ((nomadic-listener widget)))
-                      (else (display "no callbacks for type ")
-                            (display (widget-type widget))(newline)))))
-                (update-dialogs! events)
-                (send (scheme->json events))))))))
+  ;;(prof-start "widget-callback")
+  (let ((cb (find-callback widget-id)))
+    (if (not cb)
+        (msg "no widget" widget-id "found!")
+        (let ((events
+               (cond
+                ((equal? (callback-type cb) "edit-text")
+                 ((callback-fn cb) (car args)))
+                ((equal? (callback-type cb) "button")
+                 ((callback-fn cb)))
+                ((equal? (callback-type cb) "toggle-button")
+                 ((callback-fn cb) (car args)))
+                ((equal? (callback-type cb) "seek-bar")
+                 ((callback-fn cb) (car args)))
+                ((equal? (callback-type cb) "spinner")
+                 ((callback-fn cb) (car args)))
+                ((equal? (callback-type cb) "button-grid")
+                 ((callback-fn cb) (car args) (cadr args)))
+                ((equal? (callback-type cb) "nomadic")
+                 ((callback-fn cb)))
+                (else
+                 (msg "no callbacks for type" (callback-type cb))))))
+          ;;(update-callbacks! events)
+          (update-dialogs! events)
+          (send (scheme->json events))
+;;          (prof-end "widget-callback")
+))))

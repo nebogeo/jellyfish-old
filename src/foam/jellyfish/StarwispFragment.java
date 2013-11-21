@@ -18,12 +18,14 @@ package foam.jellyfish;
 import java.util.ArrayList;
 
 import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.Fragment;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.content.Context;
 import android.view.ViewGroup;
 import android.view.View;
+import android.view.LayoutInflater;
 import android.graphics.Typeface;
 
 
@@ -31,38 +33,41 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONArray;
 
-public class StarwispActivity extends FragmentActivity
+public class StarwispFragment extends Fragment
 {
     public String m_Name;
-    static public Scheme m_Scheme;
-    static public StarwispBuilder m_Builder;
-    public Typeface m_Typeface;
-    static public String m_AppDir;
+//    static public Scheme m_Scheme;
+//    static public StarwispBuilder m_Builder;
+//    public Typeface m_Typeface;
+//    static public String m_AppDir;
+
+    StarwispActivity m_Owner;
 
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.main);
+        m_Owner = (StarwispActivity)getActivity();
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup root, Bundle savedInstanceState)
+    {
+        super.onCreateView(inflater,root,savedInstanceState);
 
         String arg = "none";
-        Bundle extras = getIntent().getExtras();
-        if (extras!=null) {
-            arg = extras.getString("arg");
-        }
-
-        String json = m_Scheme.eval("(activity-callback 'on-create \""+m_Name+"\" (list \""+arg+"\"))");
-        View root = findViewById(R.id.main);
-
-        m_Typeface = Typeface.createFromAsset(getAssets(), "fonts/Pfennig.ttf");
-        //m_Typeface = Typeface.createFromAsset(getAssets(), "fonts/grstylus.ttf");
+        String json = m_Owner.m_Scheme.eval("(fragment-callback 'on-create \""+m_Name+"\" (list \""+arg+"\"))");
+        View view = inflater.inflate(R.layout.main_fragment, root, false);
 
         try {
-            m_Builder.Build(this, m_Name, new JSONArray(json), (ViewGroup) root);
+            m_Owner.m_Builder.Build(m_Owner, m_Name, new JSONArray(json), (ViewGroup) view);
         } catch (JSONException e) {
             Log.e("starwisp", "Error parsing ["+json+"] " + e.toString());
         }
+
+        return view;
     }
+
 
     @Override
     public void onStart()
@@ -70,14 +75,9 @@ public class StarwispActivity extends FragmentActivity
         super.onStart();
 
         String arg = "none";
-        Bundle extras = getIntent().getExtras();
-        if (extras!=null) {
-            arg = extras.getString("arg");
-        }
-
-        String ret=m_Scheme.eval("(activity-callback 'on-start \""+m_Name+"\" (list \""+arg+"\"))");
+        String ret=m_Owner.m_Scheme.eval("(fragment-callback 'on-start \""+m_Name+"\" (list \""+arg+"\"))");
         try {
-            m_Builder.UpdateList(this, m_Name, new JSONArray(ret));
+            m_Owner.m_Builder.UpdateList(m_Owner, m_Name,  new JSONArray(ret));
         } catch (JSONException e) {
             Log.e("starwisp", "Error parsing ["+ret+"] " + e.toString());
         }
@@ -87,9 +87,9 @@ public class StarwispActivity extends FragmentActivity
     public void onResume()
     {
         super.onResume();
-        String ret=m_Scheme.eval("(activity-callback 'on-resume \""+m_Name+"\" '())");
+        String ret=m_Owner.m_Scheme.eval("(fragment-callback 'on-resume \""+m_Name+"\" '())");
         try {
-            m_Builder.UpdateList(this, m_Name, new JSONArray(ret));
+            m_Owner.m_Builder.UpdateList(m_Owner, m_Name, new JSONArray(ret));
         } catch (JSONException e) {
             Log.e("starwisp", "Error parsing ["+ret+"] " + e.toString());
         }
@@ -100,9 +100,9 @@ public class StarwispActivity extends FragmentActivity
     public void onPause()
     {
         super.onPause();
-        String ret=m_Scheme.eval("(activity-callback 'on-pause \""+m_Name+"\" '())");
+        String ret=m_Owner.m_Scheme.eval("(fragment-callback 'on-pause \""+m_Name+"\" '())");
         try {
-            m_Builder.UpdateList(this, m_Name, new JSONArray(ret));
+            m_Owner.m_Builder.UpdateList(m_Owner, m_Name, new JSONArray(ret));
         } catch (JSONException e) {
             Log.e("starwisp", "Error parsing ["+ret+"] " + e.toString());
         }
@@ -112,9 +112,9 @@ public class StarwispActivity extends FragmentActivity
     public void onStop()
     {
         super.onStop();
-        String ret=m_Scheme.eval("(activity-callback 'on-stop \""+m_Name+"\" '())");
+        String ret=m_Owner.m_Scheme.eval("(fragment-callback 'on-stop \""+m_Name+"\" '())");
         try {
-            m_Builder.UpdateList(this, m_Name, new JSONArray(ret));
+            m_Owner.m_Builder.UpdateList(m_Owner, m_Name, new JSONArray(ret));
         } catch (JSONException e) {
             Log.e("starwisp", "Error parsing ["+ret+"] " + e.toString());
         }
@@ -124,25 +124,17 @@ public class StarwispActivity extends FragmentActivity
     public void onDestroy()
     {
         super.onDestroy();
-        String ret=m_Scheme.eval("(activity-callback 'on-destroy \""+m_Name+"\" '())");
+        String ret=m_Owner.m_Scheme.eval("(fragment-callback 'on-destroy \""+m_Name+"\" '())");
         try {
-            m_Builder.UpdateList(this, m_Name, new JSONArray(ret));
+            m_Owner.m_Builder.UpdateList(m_Owner, m_Name, new JSONArray(ret));
         } catch (JSONException e) {
             Log.e("starwisp", "Error parsing ["+ret+"] " + e.toString());
         }
     }
-
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        String ret=m_Scheme.eval("(activity-callback 'on-activity-result \""+m_Name+"\" '("+requestCode+" "+resultCode+"))");
-        try {
-            m_Builder.UpdateList(this, m_Name, new JSONArray(ret));
-        } catch (JSONException e) {
-            Log.e("starwisp", "Error parsing ["+ret+"] " + e.toString());
-        }
-	}
 
     @Override
-    protected void onSaveInstanceState(Bundle outState) {
+    public void onSaveInstanceState(Bundle outState) {
         //No call for super(). Bug on API Level > 11.
     }
+
 }

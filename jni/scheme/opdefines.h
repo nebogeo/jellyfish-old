@@ -230,6 +230,11 @@
     _OP_DEF(opexe_6, "minverse",                       1,  1,       0,                               OP_MINVERSE )
     _OP_DEF(opexe_6, "bitwise-ior",                    3,  3,       0,                               OP_BITWISE_IOR )
 
+    _OP_DEF(opexe_6, "alog",                           1,  1,       TST_NONE,                        OP_ALOG             )
     _OP_DEF(opexe_6, "send",                           1,  1,       0,                               OP_SEND             )
+    _OP_DEF(opexe_6, "time",                           0,  0,       TST_NONE,                        OP_TIME             )
+    _OP_DEF(opexe_6, "date-time",                      0,  0,       TST_NONE,                        OP_DATETIME         )
+    _OP_DEF(opexe_6, "id-map-add",                     2,  2,       TST_NONE,                        OP_ID_MAP_ADD       )
+    _OP_DEF(opexe_6, "id-map-get",                     1,  1,       TST_NONE,                        OP_ID_MAP_GET       )
 
 #undef _OP_DEF

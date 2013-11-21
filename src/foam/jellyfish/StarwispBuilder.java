@@ -17,7 +17,18 @@ package foam.jellyfish;
 
 import java.util.ArrayList;
 
-import android.app.Activity;
+import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.Fragment;
+import android.app.DialogFragment;
+import android.support.v4.app.FragmentTransaction;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentPagerAdapter;
+import android.support.v4.view.ViewPager;
+
+// removed due to various aggravating factors
+//import android.support.v7.widget.GridLayout;
+//import android.widget.GridLayout;
+
 import android.util.Log;
 import android.content.Context;
 import android.graphics.Color;
@@ -36,6 +47,7 @@ import android.widget.Button;
 import android.widget.ToggleButton;
 import android.widget.LinearLayout;
 import android.widget.FrameLayout;
+//import android.widget.GridLayout.Spec;
 import android.widget.ScrollView;
 import android.widget.HorizontalScrollView;
 import android.widget.SeekBar;
@@ -52,10 +64,12 @@ import android.view.WindowManager;
 import android.view.View;
 import android.view.Gravity;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.text.TextWatcher;
 import android.text.Html;
 import android.text.Editable;
 import android.text.method.LinkMovementMethod;
+import android.text.method.ScrollingMovementMethod;
 import android.widget.DatePicker;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.Camera.Size;
@@ -69,12 +83,17 @@ import java.util.Date;
 import java.text.DateFormat;
 import java.util.List;
 import android.content.DialogInterface;
+import android.text.InputType;
+import android.util.TypedValue;
+import android.os.Handler;
 
 import android.app.TimePickerDialog;
 import android.app.DatePickerDialog;
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.Intent;
 import java.util.Calendar;
+import android.os.Bundle;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -83,8 +102,13 @@ import org.json.JSONArray;
 public class StarwispBuilder
 {
     Scheme m_Scheme;
+    NetworkManager m_NetworkManager;
+    Handler m_Handler;
+
     public StarwispBuilder(Scheme scm) {
         m_Scheme = scm;
+        m_NetworkManager = new NetworkManager();
+        m_Handler = new Handler();
     }
 
     public int BuildOrientation(String p) {
@@ -97,6 +121,7 @@ public class StarwispBuilder
         if (p.equals("centre")) return Gravity.CENTER;
         if (p.equals("left")) return Gravity.LEFT;
         if (p.equals("right")) return Gravity.RIGHT;
+        if (p.equals("fill")) return Gravity.FILL;
         return Gravity.LEFT;
     }
 
@@ -120,6 +145,8 @@ public class StarwispBuilder
                                               BuildLayoutParam(arr.getString(2)),
                                               (float)arr.getDouble(3));
             lp.gravity=BuildLayoutGravity(arr.getString(4));
+            int margin=1;//arr.getInt(5);
+            lp.setMargins(margin,margin,margin,margin);
             return lp;
         } catch (JSONException e) {
             Log.e("starwisp", "Error parsing data " + e.toString());
@@ -127,43 +154,102 @@ public class StarwispBuilder
         }
     }
 
-    public void Callback(StarwispActivity ctx, int wid)
+    public void DialogCallback(StarwispActivity ctx, String ctxname, String name, String args)
     {
         try {
-            String ret=m_Scheme.eval("(widget-callback \""+
-                                     ctx.m_Name+"\" "+
-                                     wid+" '())");
-            UpdateList(ctx, new JSONArray(ret));
+            String ret=m_Scheme.eval("(dialog-callback \""+name+"\" '("+args+"))");
+            UpdateList(ctx, ctxname, new JSONArray(ret));
         } catch (JSONException e) {
             Log.e("starwisp", "Error parsing data " + e.toString());
         }
     }
 
-    public void CallbackArgs(StarwispActivity ctx, int wid, String args)
+
+    private void Callback(StarwispActivity ctx, String ctxname, int wid)
     {
         try {
-            String ret=m_Scheme.eval("(widget-callback \""+
-                                     ctx.m_Name+"\" "+
-                                     wid+" '("+args+"))");
-            UpdateList(ctx, new JSONArray(ret));
+            String ret=m_Scheme.eval("(widget-callback \""+ctxname+"\" "+wid+" '())");
+            UpdateList(ctx, ctxname, new JSONArray(ret));
         } catch (JSONException e) {
             Log.e("starwisp", "Error parsing data " + e.toString());
         }
     }
 
-    public void Build(final StarwispActivity ctx, JSONArray arr, ViewGroup parent) {
+    private void CallbackArgs(StarwispActivity ctx, String ctxname, int wid, String args)
+    {
+        try {
+            String ret=m_Scheme.eval("(widget-callback \""+ctxname+"\" "+wid+" '("+args+"))");
+            UpdateList(ctx, ctxname, new JSONArray(ret));
+        } catch (JSONException e) {
+            Log.e("starwisp", "Error parsing data " + e.toString());
+        }
+    }
+
+
+    public static void email(Context context, String emailTo, String emailCC,
+                             String subject, String emailText, List<String> filePaths)
+    {
+        //need to "send multiple" to get more than one attachment
+        final Intent emailIntent = new Intent(android.content.Intent.ACTION_SEND_MULTIPLE);
+        emailIntent.setType("text/plain");
+        emailIntent.putExtra(android.content.Intent.EXTRA_EMAIL,
+        new String[]{emailTo});
+        emailIntent.putExtra(android.content.Intent.EXTRA_CC,
+                             new String[]{emailCC});
+        emailIntent.putExtra(Intent.EXTRA_SUBJECT, subject);
+
+        ArrayList<String> extra_text = new ArrayList<String>();
+        extra_text.add(emailText);
+        emailIntent.putStringArrayListExtra(Intent.EXTRA_TEXT, extra_text);
+        //emailIntent.putExtra(Intent.EXTRA_TEXT, emailText);
+
+        //has to be an ArrayList
+        ArrayList<Uri> uris = new ArrayList<Uri>();
+        //convert from paths to Android friendly Parcelable Uri's
+        for (String file : filePaths)
+        {
+            File fileIn = new File(file);
+            Uri u = Uri.fromFile(fileIn);
+            uris.add(u);
+        }
+        emailIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
+        context.startActivity(Intent.createChooser(emailIntent, "Send mail..."));
+    }
+
+    public void Build(final StarwispActivity ctx, final String ctxname, JSONArray arr, ViewGroup parent) {
+
         try {
             String type = arr.getString(0);
+
+            //Log.i("starwisp","building started "+type);
+
+            if (type.equals("build-fragment")) {
+                String name = arr.getString(1);
+                int ID = arr.getInt(2);
+                Fragment fragment = ActivityManager.GetFragment(name);
+                LinearLayout inner = new LinearLayout(ctx);
+                inner.setLayoutParams(BuildLayoutParams(arr.getJSONArray(3)));
+                inner.setId(ID);
+                FragmentTransaction fragmentTransaction = ctx.getSupportFragmentManager().beginTransaction();
+                fragmentTransaction.add(ID,fragment);
+                fragmentTransaction.commit();
+                parent.addView(inner);
+                return;
+            }
+
 
             if (type.equals("linear-layout")) {
                 LinearLayout v = new LinearLayout(ctx);
                 v.setId(arr.getInt(1));
                 v.setOrientation(BuildOrientation(arr.getString(2)));
                 v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(3)));
+                //v.setPadding(2,2,2,2);
+                JSONArray col = arr.getJSONArray(4);
+                v.setBackgroundColor(Color.argb(col.getInt(3), col.getInt(0), col.getInt(1), col.getInt(2)));
                 parent.addView(v);
-                JSONArray children = arr.getJSONArray(4);
+                JSONArray children = arr.getJSONArray(5);
                 for (int i=0; i<children.length(); i++) {
-                    Build(ctx,new JSONArray(children.getString(i)), v);
+                    Build(ctx,ctxname,new JSONArray(children.getString(i)), v);
                 }
                 return;
             }
@@ -175,10 +261,29 @@ public class StarwispBuilder
                 parent.addView(v);
                 JSONArray children = arr.getJSONArray(3);
                 for (int i=0; i<children.length(); i++) {
-                    Build(ctx,new JSONArray(children.getString(i)), v);
+                    Build(ctx,ctxname,new JSONArray(children.getString(i)), v);
                 }
                 return;
             }
+
+            /*
+            if (type.equals("grid-layout")) {
+                GridLayout v = new GridLayout(ctx);
+                v.setId(arr.getInt(1));
+                v.setRowCount(arr.getInt(2));
+                //v.setColumnCount(arr.getInt(2));
+                v.setOrientation(BuildOrientation(arr.getString(3)));
+                v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(4)));
+
+                parent.addView(v);
+                JSONArray children = arr.getJSONArray(5);
+                for (int i=0; i<children.length(); i++) {
+                    Build(ctx,ctxname,new JSONArray(children.getString(i)), v);
+                }
+
+                return;
+            }
+            */
 
             if (type.equals("scroll-view")) {
                 HorizontalScrollView v = new HorizontalScrollView(ctx);
@@ -187,11 +292,52 @@ public class StarwispBuilder
                 parent.addView(v);
                 JSONArray children = arr.getJSONArray(3);
                 for (int i=0; i<children.length(); i++) {
-                    Build(ctx,new JSONArray(children.getString(i)), v);
+                    Build(ctx,ctxname,new JSONArray(children.getString(i)), v);
                 }
                 return;
             }
 
+            if (type.equals("scroll-view-vert")) {
+                ScrollView v = new ScrollView(ctx);
+                v.setId(arr.getInt(1));
+                v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(2)));
+                parent.addView(v);
+                JSONArray children = arr.getJSONArray(3);
+                for (int i=0; i<children.length(); i++) {
+                    Build(ctx,ctxname,new JSONArray(children.getString(i)), v);
+                }
+                return;
+            }
+
+
+            if (type.equals("view-pager")) {
+                ViewPager v = new ViewPager(ctx);
+                v.setId(arr.getInt(1));
+                v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(2)));
+                v.setOffscreenPageLimit(3);
+                final JSONArray items = arr.getJSONArray(3);
+
+                v.setAdapter(new FragmentPagerAdapter(ctx.getSupportFragmentManager()) {
+
+                    @Override
+                    public int getCount() {
+                        return items.length();
+                    }
+
+                    @Override
+                    public Fragment getItem(int position) {
+                        try {
+                            String fragname = items.getString(position);
+                            return ActivityManager.GetFragment(fragname);
+                        } catch (JSONException e) {
+                            Log.e("starwisp", "Error parsing data " + e.toString());
+                        }
+                        return null;
+                    }
+                });
+                parent.addView(v);
+                return;
+            }
 
             if (type.equals("space")) {
                 // Space v = new Space(ctx); (class not found runtime error??)
@@ -226,14 +372,54 @@ public class StarwispBuilder
                 v.setTextSize(arr.getInt(3));
                 v.setMovementMethod(LinkMovementMethod.getInstance());
                 v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(4)));
-                if (arr.length()>5 && arr.getString(5).equals("left")) {
-                    v.setGravity(Gravity.LEFT);
+                if (arr.length()>5) {
+                    if (arr.getString(5).equals("left")) {
+                        v.setGravity(Gravity.LEFT);
+                    } else {
+                        if (arr.getString(5).equals("fill")) {
+                            v.setGravity(Gravity.FILL);
+                        } else {
+                            v.setGravity(Gravity.CENTER);
+                        }
+                    }
                 } else {
-                    v.setGravity(Gravity.CENTER);
+                    v.setGravity(Gravity.LEFT);
                 }
                 v.setTypeface(((StarwispActivity)ctx).m_Typeface);
                 parent.addView(v);
             }
+
+            if (type.equals("debug-text-view")) {
+                TextView v = (TextView)ctx.getLayoutInflater().inflate(R.layout.debug_text, null);
+//                v.setBackgroundResource(R.color.black);
+                v.setId(arr.getInt(1));
+//                v.setText(Html.fromHtml(arr.getString(2)));
+//                v.setTextColor(R.color.white);
+//                v.setTextSize(arr.getInt(3));
+//                v.setMovementMethod(LinkMovementMethod.getInstance());
+//                v.setMaxLines(10);
+//                v.setVerticalScrollBarEnabled(true);
+//                v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(4)));
+                //v.setMovementMethod(new ScrollingMovementMethod());
+
+                /*
+                if (arr.length()>5) {
+                    if (arr.getString(5).equals("left")) {
+                        v.setGravity(Gravity.LEFT);
+                    } else {
+                        if (arr.getString(5).equals("fill")) {
+                            v.setGravity(Gravity.FILL);
+                        } else {
+                            v.setGravity(Gravity.CENTER);
+                        }
+                    }
+                } else {
+                    v.setGravity(Gravity.LEFT);
+                }
+                v.setTypeface(((StarwispActivity)ctx).m_Typeface);*/
+                parent.addView(v);
+            }
+
 
             if (type.equals("web-view")) {
                 WebView v = new WebView(ctx);
@@ -250,32 +436,30 @@ public class StarwispBuilder
                 v.setId(arr.getInt(1));
                 v.setText(arr.getString(2));
                 v.setTextSize(arr.getInt(3));
-                v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(4)));
+
+                String inputtype = arr.getString(4);
+                if (inputtype.equals("text")) {
+                    //v.setInputType(InputType.TYPE_CLASS_TEXT);
+                } else if (inputtype.equals("numeric")) {
+                    v.setInputType(InputType.TYPE_NUMBER_FLAG_DECIMAL|InputType.TYPE_NUMBER_FLAG_DECIMAL);
+                } else if (inputtype.equals("email")) {
+                    v.setInputType(InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS);
+                }
+
+                v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(5)));
                 v.setTypeface(((StarwispActivity)ctx).m_Typeface);
                 final String fn = arr.getString(5);
                 v.setSingleLine(true);
-/*                v.setOnClickListener(new View.OnClickListener() {
-                    public void onClick(View v) {
-                        v.setFocusable(true);
-                        v.requestFocus();
 
-                        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
-                    }
-                });
-*/
-                v.setOnKeyListener(new View.OnKeyListener() {
-                    public boolean onKey(View a, int keyCode, KeyEvent event) {
-                        if ((event.getAction() == KeyEvent.ACTION_DOWN) &&
-                            (keyCode == KeyEvent.KEYCODE_ENTER)) {
-                            CallbackArgs(ctx,v.getId(),"\""+v.getText()+"\"");
-                        }
-                        return false;
-                    }
-                });
+                v.addTextChangedListener(new TextWatcher() {
+                     public void afterTextChanged(Editable s) {
+                         CallbackArgs(ctx,ctxname,v.getId(),"\""+s.toString()+"\"");
+                     }
+                     public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                     public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                 });
 
                 parent.addView(v);
-
-
             }
 
             if (type.equals("button")) {
@@ -288,7 +472,7 @@ public class StarwispBuilder
                 final String fn = arr.getString(5);
                 v.setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {
-                        Callback(ctx,v.getId());
+                        Callback(ctx,ctxname,v.getId());
                     }
                 });
                 parent.addView(v);
@@ -306,7 +490,7 @@ public class StarwispBuilder
                     public void onClick(View v) {
                         String arg="#f";
                         if (((ToggleButton) v).isChecked()) arg="#t";
-                        CallbackArgs(ctx,v.getId(),arg);
+                        CallbackArgs(ctx,ctxname,v.getId(),arg);
                     }
                 });
                 parent.addView(v);
@@ -323,7 +507,7 @@ public class StarwispBuilder
 
                 v.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
                     public void onProgressChanged(SeekBar v, int a, boolean s) {
-                        CallbackArgs(ctx,v.getId(),Integer.toString(a));
+                        CallbackArgs(ctx,ctxname,v.getId(),Integer.toString(a));
                     }
                     public void onStartTrackingTouch(SeekBar v) {}
                     public void onStopTrackingTouch(SeekBar v) {}
@@ -358,7 +542,7 @@ public class StarwispBuilder
                 v.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                     public void onItemSelected(AdapterView<?> a, View v, int pos, long id) {
                         try {
-                            CallbackArgs(ctx,wid,"\""+items.getString(pos)+"\"");
+                            CallbackArgs(ctx,ctxname,wid,"\""+items.getString(pos)+"\"");
                         } catch (JSONException e) {
                             Log.e("starwisp", "Error parsing data " + e.toString());
                         }
@@ -369,20 +553,21 @@ public class StarwispBuilder
                 parent.addView(v);
             }
 
+         if (type.equals("nomadic")) {
+                final int wid = arr.getInt(1);
+                NomadicSurfaceView v = new NomadicSurfaceView(ctx,wid);
+                v.setId(wid);
+                v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(2)));
+                parent.addView(v);
+         }
+
+/*
             if (type.equals("canvas")) {
                 StarwispCanvas v = new StarwispCanvas(ctx);
                 final int wid = arr.getInt(1);
                 v.setId(wid);
                 v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(2)));
                 v.SetDrawList(arr.getJSONArray(3));
-                parent.addView(v);
-            }
-
-            if (type.equals("nomadic")) {
-                final int wid = arr.getInt(1);
-                NomadicSurfaceView v = new NomadicSurfaceView(ctx,wid);
-                v.setId(wid);
-                v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(2)));
                 parent.addView(v);
             }
 
@@ -401,36 +586,170 @@ public class StarwispBuilder
 //                v.setLayoutParams(lp);
                 parent.addView(v);
             }
+*/
+            if (type.equals("button-grid")) {
+                LinearLayout horiz = new LinearLayout(ctx);
+                final int id = arr.getInt(1);
+                final String buttontype = arr.getString(2);
+                horiz.setId(id);
+                horiz.setOrientation(LinearLayout.HORIZONTAL);
+                parent.addView(horiz);
+                int height = arr.getInt(3);
+                int textsize = arr.getInt(4);
+                LinearLayout.LayoutParams lp = BuildLayoutParams(arr.getJSONArray(5));
+                JSONArray buttons = arr.getJSONArray(6);
+                int count = buttons.length();
+                int vertcount = 0;
+                LinearLayout vert = null;
+
+                for (int i=0; i<count; i++) {
+                    JSONArray button = buttons.getJSONArray(i);
+
+                    if (vertcount==0) {
+                        vert = new LinearLayout(ctx);
+                        vert.setId(0);
+                        vert.setOrientation(LinearLayout.VERTICAL);
+                        horiz.addView(vert);
+                    }
+                    vertcount=(vertcount+1)%height;
+
+                    if (buttontype.equals("button")) {
+                        Button b = new Button(ctx);
+                        b.setId(button.getInt(0));
+                        b.setText(button.getString(1));
+                        b.setTextSize(textsize);
+                        b.setLayoutParams(lp);
+                        b.setTypeface(((StarwispActivity)ctx).m_Typeface);
+                        final String fn = arr.getString(6);
+                        b.setOnClickListener(new View.OnClickListener() {
+                            public void onClick(View v) {
+                                CallbackArgs(ctx,ctxname,id,""+v.getId()+" #t");
+                            }
+                        });
+                        vert.addView(b);
+                    }
+                    else if (buttontype.equals("toggle")) {
+                        ToggleButton b = new ToggleButton(ctx);
+                        b.setId(button.getInt(0));
+                        b.setText(button.getString(1));
+                        b.setTextSize(textsize);
+                        b.setLayoutParams(lp);
+                        b.setTypeface(((StarwispActivity)ctx).m_Typeface);
+                        final String fn = arr.getString(6);
+                        b.setOnClickListener(new View.OnClickListener() {
+                            public void onClick(View v) {
+                                String arg="#f";
+                                if (((ToggleButton) v).isChecked()) arg="#t";
+                                CallbackArgs(ctx,ctxname,id,""+v.getId()+" "+arg);
+                            }
+                        });
+                        vert.addView(b);
+                    }
+                }
+            }
+
+
 
         } catch (JSONException e) {
             Log.e("starwisp", "Error parsing ["+arr.toString()+"] " + e.toString());
         }
+
+        //Log.i("starwisp","building ended");
+
     }
 
-    public void UpdateList(Activity ctx, JSONArray arr) {
+    public void UpdateList(FragmentActivity ctx, String ctxname, JSONArray arr) {
         try {
             for (int i=0; i<arr.length(); i++) {
-                Update(ctx,new JSONArray(arr.getString(i)));
+                Update((StarwispActivity)ctx,ctxname,new JSONArray(arr.getString(i)));
             }
         } catch (JSONException e) {
             Log.e("starwisp", "Error parsing data " + e.toString());
         }
     }
 
-    public void Update(final Activity ctx, JSONArray arr) {
+    public void Update(final StarwispActivity ctx, final String ctxname, JSONArray arr) {
         try {
 
             String type = arr.getString(0);
-            Integer id = arr.getInt(1);
+            final Integer id = arr.getInt(1);
             String token = arr.getString(2);
 
-//            Log.i("starwisp", "Update: "+type+" "+id+" "+token);
+            Log.i("starwisp", "Update: "+type+" "+id+" "+token);
 
             // non widget commands
             if (token.equals("toast")) {
                 Toast msg = Toast.makeText(ctx.getBaseContext(),arr.getString(3),Toast.LENGTH_SHORT);
                 msg.show();
                 return;
+            }
+
+            if (type.equals("replace-fragment")) {
+                int ID = arr.getInt(1);
+                String name = arr.getString(2);
+                Fragment fragment = ActivityManager.GetFragment(name);
+                FragmentTransaction ft = ctx.getSupportFragmentManager().beginTransaction();
+
+                ft.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN);
+
+                //ft.setCustomAnimations(
+                //    R.animator.card_flip_right_in, R.animator.card_flip_right_out,
+                //    R.animator.card_flip_left_in, R.animator.card_flip_left_out);
+                ft.replace(ID, fragment);
+                //ft.addToBackStack(null);
+                ft.commit();
+                return;
+            }
+
+            if (token.equals("dialog-fragment")) {
+                FragmentManager fm = ctx.getSupportFragmentManager();
+                final int ID = arr.getInt(3);
+                final JSONArray lp = arr.getJSONArray(4);
+                final String name = arr.getString(5);
+
+                final Dialog dialog = new Dialog(ctx);
+                dialog.setTitle("Title...");
+
+                LinearLayout inner = new LinearLayout(ctx);
+                inner.setId(ID);
+                inner.setLayoutParams(BuildLayoutParams(lp));
+
+                dialog.setContentView(inner);
+
+//                Fragment fragment = ActivityManager.GetFragment(name);
+//                FragmentTransaction fragmentTransaction = ctx.getSupportFragmentManager().beginTransaction();
+//                fragmentTransaction.add(ID,fragment);
+//                fragmentTransaction.commit();
+
+                dialog.show();
+
+
+
+/*                DialogFragment df = new DialogFragment() {
+                    @Override
+                    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                                             Bundle savedInstanceState) {
+                        LinearLayout inner = new LinearLayout(ctx);
+                        inner.setId(ID);
+                        inner.setLayoutParams(BuildLayoutParams(lp));
+
+                        return inner;
+                    }
+
+                    @Override
+                    public Dialog onCreateDialog(Bundle savedInstanceState) {
+                        Dialog ret = super.onCreateDialog(savedInstanceState);
+                        Log.i("starwisp","MAKINGDAMNFRAGMENT");
+
+                        Fragment fragment = ActivityManager.GetFragment(name);
+                        FragmentTransaction fragmentTransaction = ctx.getSupportFragmentManager().beginTransaction();
+                        fragmentTransaction.add(1,fragment);
+                        fragmentTransaction.commit();
+                        return ret;
+                    }
+                };
+                df.show(ctx.getFragmentManager(), "foo");
+*/
             }
 
             if (token.equals("time-picker-dialog")) {
@@ -466,16 +785,54 @@ public class StarwispBuilder
                         }
                         code+=")";
 
-                        try {
-                            String ret=m_Scheme.eval("(dialog-callback \""+ name+"\" '("+code+"))");
-                            UpdateList(ctx, new JSONArray(ret));
-                        } catch (JSONException e) {
-                            Log.e("starwisp", "Error parsing data " + e.toString());
-                        }
+                        DialogCallback(ctx, ctxname, name, code);
                     }
                 }
                 return;
             }
+
+            if (token.equals("delayed")) {
+                final String name = arr.getString(3);
+                final int d = arr.getInt(5);
+                Runnable timerThread = new Runnable() {
+                    public void run() {
+                        DialogCallback(ctx, ctxname, name, "");
+                    }
+                };
+                m_Handler.removeCallbacksAndMessages(null);
+                m_Handler.postDelayed(timerThread, d);
+                return;
+            }
+
+            if (token.equals("network-connect")) {
+                if (m_NetworkManager.state==NetworkManager.State.IDLE) {
+                    final String name = arr.getString(3);
+                    final String ssid = arr.getString(5);
+                    m_NetworkManager.Start(ssid,(StarwispActivity)ctx,name,this);
+                }
+                return;
+            }
+
+            if (token.equals("http-request")) {
+                if (m_NetworkManager.state==NetworkManager.State.CONNECTED) {
+                    Log.i("starwisp","attempting http request");
+                    final String name = arr.getString(3);
+                    final String url = arr.getString(5);
+                    m_NetworkManager.StartRequestThread(url,"normal",name);
+                }
+                return;
+            }
+
+            if (token.equals("http-download")) {
+                if (m_NetworkManager.state==NetworkManager.State.CONNECTED) {
+                    Log.i("starwisp","attempting http dl request");
+                    final String filename = arr.getString(4);
+                    final String url = arr.getString(5);
+                    m_NetworkManager.StartRequestThread(url,"download",filename);
+                }
+                return;
+            }
+
 
             if (token.equals("send-mail")) {
                 final String to[] = new String[1];
@@ -483,31 +840,15 @@ public class StarwispBuilder
                 final String subject = arr.getString(4);
                 final String body = arr.getString(5);
 
-                Intent i = new Intent(Intent.ACTION_SEND);
-                i.setType("plain/text");
-                i.putExtra(Intent.EXTRA_EMAIL, to);
-                i.putExtra(Intent.EXTRA_SUBJECT, subject);
-                i.putExtra(Intent.EXTRA_TEXT, body);
-
                 JSONArray attach = arr.getJSONArray(6);
-
-/*                ArrayList<Uri> uris = new ArrayList<Uri>();
-                //convert from paths to Android friendly Parcelable Uri's
+                ArrayList<String> paths = new ArrayList<String>();
                 for (int a=0; a<attach.length(); a++)
                 {
                     Log.i("starwisp",attach.getString(a));
-                    File fileIn = new File(attach.getString(a));
-                    Uri u = Uri.fromFile(fileIn);
-                    uris.add(u);
+                    paths.add(attach.getString(a));
                 }
-*/
-                //i.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
-                i.putExtra(Intent.EXTRA_STREAM, Uri.parse("file://"+attach.getString(0)));
-                try {
-                    ctx.startActivity(Intent.createChooser(i, "Send mail..."));
-                } catch (android.content.ActivityNotFoundException ex) {
-                    Toast.makeText(ctx, "There are no email clients installed.", Toast.LENGTH_SHORT).show();
-                }
+
+                email(ctx, to[0], "", subject, body, paths);
             }
 
             if (token.equals("date-picker-dialog")) {
@@ -523,13 +864,7 @@ public class StarwispBuilder
                     ctx,
                     new DatePickerDialog.OnDateSetListener() {
                         public void onDateSet(DatePicker view, int year, int month, int day) {
-                            try {
-                                String ret=m_Scheme.eval("(dialog-callback \""+
-                                                         name+"\" '("+day+" "+month+" "+year+"))");
-                                UpdateList(ctx, new JSONArray(ret));
-                            } catch (JSONException e) {
-                                Log.e("starwisp", "Error parsing data " + e.toString());
-                            }
+                            DialogCallback(ctx, ctxname, name, day+" "+month+" "+year);
                         }
                     }, year, month, day);
                 d.show();
@@ -546,13 +881,7 @@ public class StarwispBuilder
                     public void onClick(DialogInterface dialog, int which) {
                         int result = 0;
                         if (which==DialogInterface.BUTTON_POSITIVE) result=1;
-                        String ret=m_Scheme.eval("(dialog-callback \""+
-                                                 name+"\" '("+result+"))");
-                        try {
-                            UpdateList(ctx, new JSONArray(ret));
-                        } catch (JSONException e) {
-                            Log.e("starwisp", "Error parsing data " + e.toString());
-                        }
+                        DialogCallback(ctx, ctxname, name, ""+result);
                     }
                 };
 
@@ -581,11 +910,13 @@ public class StarwispBuilder
                 return;
             }
 
+///////////////////////////////////////////////////////////
+
             // now try and find the widget
             View vv=ctx.findViewById(id);
             if (vv==null)
             {
-//                Log.i("starwisp", "Can't find widget : "+id);
+                Log.i("starwisp", "Can't find widget : "+id);
                 return;
             }
 
@@ -600,6 +931,13 @@ public class StarwispBuilder
                 return;
             }
 
+            // tokens that work on everything
+            if (token.equals("set-enabled")) {
+                vv.setEnabled(arr.getInt(3)==1);
+                return;
+            }
+
+
             // special cases
             if (type.equals("linear-layout")) {
                 LinearLayout v = (LinearLayout)vv;
@@ -607,8 +945,145 @@ public class StarwispBuilder
                     v.removeAllViews();
                     JSONArray children = arr.getJSONArray(3);
                     for (int i=0; i<children.length(); i++) {
-                        Build((StarwispActivity)ctx,new JSONArray(children.getString(i)), v);
+                        Build(ctx,ctxname,new JSONArray(children.getString(i)), v);
                     }
+                }
+            }
+
+            if (type.equals("button-grid")) {
+                Log.i("starwisp","button-grid update");
+                LinearLayout horiz = (LinearLayout)vv;
+                if (token.equals("grid-buttons")) {
+                    Log.i("starwisp","button-grid contents");
+                    horiz.removeAllViews();
+
+                    JSONArray params = arr.getJSONArray(3);
+                    String buttontype = params.getString(0);
+                    int height = params.getInt(1);
+                    int textsize = params.getInt(2);
+                    LinearLayout.LayoutParams lp = BuildLayoutParams(params.getJSONArray(3));
+                    final JSONArray buttons = params.getJSONArray(4);
+                    final int count = buttons.length();
+                    int vertcount = 0;
+                    LinearLayout vert = null;
+
+                    for (int i=0; i<count; i++) {
+                        JSONArray button = buttons.getJSONArray(i);
+
+                        if (vertcount==0) {
+                            vert = new LinearLayout(ctx);
+                            vert.setId(0);
+                            vert.setOrientation(LinearLayout.VERTICAL);
+                            horiz.addView(vert);
+                        }
+                        vertcount=(vertcount+1)%height;
+
+                        if (buttontype.equals("button")) {
+                            Button b = new Button(ctx);
+                            b.setId(button.getInt(0));
+                            b.setText(button.getString(1));
+                            b.setTextSize(textsize);
+                            b.setLayoutParams(lp);
+                            b.setTypeface(((StarwispActivity)ctx).m_Typeface);
+                            final String fn = params.getString(5);
+                            b.setOnClickListener(new View.OnClickListener() {
+                                public void onClick(View v) {
+                                    CallbackArgs(ctx,ctxname,id,""+v.getId()+" #t");
+                                }
+                            });
+                            vert.addView(b);
+                        }
+                        else if (buttontype.equals("toggle")) {
+                            ToggleButton b = new ToggleButton(ctx);
+                            b.setId(button.getInt(0));
+                            b.setText(button.getString(1));
+                            b.setTextSize(textsize);
+                            b.setLayoutParams(lp);
+                            b.setTypeface(((StarwispActivity)ctx).m_Typeface);
+                            final String fn = params.getString(5);
+                            b.setOnClickListener(new View.OnClickListener() {
+                                public void onClick(View v) {
+                                    String arg="#f";
+                                    if (((ToggleButton) v).isChecked()) arg="#t";
+                                    CallbackArgs(ctx,ctxname,id,""+v.getId()+" "+arg);
+                                }
+                            });
+                            vert.addView(b);
+                        }
+                        else if (buttontype.equals("single")) {
+                            ToggleButton b = new ToggleButton(ctx);
+                            b.setId(button.getInt(0));
+                            b.setText(button.getString(1));
+                            b.setTextSize(textsize);
+                            b.setLayoutParams(lp);
+                            b.setTypeface(((StarwispActivity)ctx).m_Typeface);
+                            final String fn = params.getString(5);
+                            b.setOnClickListener(new View.OnClickListener() {
+                                public void onClick(View v) {
+                                    try {
+                                        for (int i=0; i<count; i++) {
+                                            JSONArray button = buttons.getJSONArray(i);
+                                            int bid = button.getInt(0);
+                                            if (bid!=v.getId()) {
+                                                ToggleButton tb=(ToggleButton)ctx.findViewById(bid);
+                                                tb.setChecked(false);
+                                            }
+                                        }
+                                    } catch (JSONException e) {
+                                        Log.e("starwisp", "Error parsing data " + e.toString());
+                                    }
+
+                                    CallbackArgs(ctx,ctxname,id,""+v.getId()+" #t");
+                                }
+                            });
+                            vert.addView(b);
+                        }
+
+
+                    }
+                }
+            }
+
+
+
+
+
+/*
+            if (type.equals("grid-layout")) {
+                GridLayout v = (GridLayout)vv;
+                if (token.equals("contents")) {
+                    v.removeAllViews();
+                    JSONArray children = arr.getJSONArray(3);
+                    for (int i=0; i<children.length(); i++) {
+                        Build(ctx,ctxname,new JSONArray(children.getString(i)), v);
+                    }
+                }
+            }
+*/
+            if (type.equals("view-pager")) {
+                ViewPager v = (ViewPager)vv;
+                if (token.equals("switch")) {
+                    v.setCurrentItem(arr.getInt(3));
+                }
+                if (token.equals("pages")) {
+                    final JSONArray items = arr.getJSONArray(3);
+                    v.setAdapter(new FragmentPagerAdapter(ctx.getSupportFragmentManager()) {
+                        @Override
+                        public int getCount() {
+                            return items.length();
+                        }
+
+                        @Override
+                        public Fragment getItem(int position) {
+                            try {
+                                String fragname = items.getString(position);
+                                return ActivityManager.GetFragment(fragname);
+                            } catch (JSONException e) {
+                                Log.e("starwisp", "Error parsing data " + e.toString());
+                            }
+                            return null;
+                        }
+                    });
                 }
             }
 
@@ -626,9 +1101,13 @@ public class StarwispBuilder
                 return;
             }
 
-            if (type.equals("text-view")) {
+            if (type.equals("text-view") || type.equals("debug-text-view")) {
+                Log.i("starwisp","text-view...");
                 TextView v = (TextView)vv;
                 if (token.equals("text")) {
+                    if (type.equals("debug-text-view")) {
+                        //v.setMovementMethod(new ScrollingMovementMethod());
+                    }
                     v.setText(arr.getString(3));
                 }
                 return;
@@ -660,6 +1139,31 @@ public class StarwispBuilder
                 return;
             }
 
+            if (type.equals("toggle-button")) {
+                ToggleButton v = (ToggleButton)vv;
+                if (token.equals("text")) {
+                    v.setText(arr.getString(3));
+                    return;
+                }
+
+                if (token.equals("checked")) {
+                    if (arr.getInt(3)==0) v.setChecked(false);
+                    else v.setChecked(true);
+                    return;
+                }
+
+                if (token.equals("listener")) {
+                    final String fn = arr.getString(3);
+                    v.setOnClickListener(new View.OnClickListener() {
+                        public void onClick(View v) {
+                            m_Scheme.eval("("+fn+")");
+                        }
+                    });
+                }
+                return;
+            }
+
+/*
             if (type.equals("canvas")) {
                 StarwispCanvas v = (StarwispCanvas)vv;
                 if (token.equals("drawlist")) {
@@ -692,7 +1196,7 @@ public class StarwispBuilder
 
                 return;
             }
-
+*/
             if (type.equals("seek-bar")) {
                 SeekBar v = new SeekBar(ctx);
                 if (token.equals("max")) {
@@ -741,7 +1245,7 @@ public class StarwispBuilder
                     v.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                         public void onItemSelected(AdapterView<?> a, View v, int pos, long id) {
                             try {
-                                CallbackArgs((StarwispActivity)ctx,wid,"\""+items.getString(pos)+"\"");
+                                CallbackArgs(ctx,ctxname,wid,"\""+items.getString(pos)+"\"");
                             } catch (JSONException e) {
                                 Log.e("starwisp", "Error parsing data " + e.toString());
                             }

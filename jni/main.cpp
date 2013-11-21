@@ -290,9 +290,10 @@ void DisplayCallback()
   static bool first=true;
   if (first)
     {
-      appEval((char*)string("(pre-process-run '("+LoadFile("material/startup.scm")+"))").c_str());
-      printf("running script\n");
-      first=false;
+//      appEval((char*)string("(pre-process-run '("+LoadFile("material/startup.scm")+"))").c_str());
+//        appEval("(setup)");
+        printf("running script\n");
+        first=false;
     }
 }
 
@@ -396,12 +397,14 @@ int main(int argc, char *argv[])
    init_ogl_rpi(state);
 #else
 
+   w=640;
+   h=480;
+
 	unsigned int flags = GLUT_DOUBLE|GLUT_RGBA|GLUT_DEPTH;
 
 	// init OpenGL
 	glutInit(&argc,argv);
-//	glutInitWindowSize(480,800);
-	glutInitWindowSize(640,480);
+	glutInitWindowSize(w,h);
 	glutInitDisplayMode(flags);
 	char windowtitle[256];
 	sprintf(windowtitle,"fluxus raspberry pi scratchpad");
@@ -419,20 +422,28 @@ int main(int argc, char *argv[])
 
 #endif
 
+
     appInit();
+    initGL();
 
-    appEval((char*)LoadFile("material/flx/init.scm").c_str());
-    appEval((char*)LoadFile("material/flx/boot.scm").c_str());
+    //appEval((char*)LoadFile("material/flx/init.scm").c_str());
+    //appEval((char*)LoadFile("material/flx/boot.scm").c_str());
 
-    long w=0,h=0;
-    unsigned char *tex=LoadPNG("material/textures/font.png",w,h);
-    appLoadTexture("font.png",w,h,(char *)tex);
+    appEval((char*)LoadFile("../assets/init.scm").c_str());
+    appEval((char*)LoadFile("../assets/boot.scm").c_str());
+    appEval((char*)LoadFile("../assets/lib.scm").c_str());
+    appEval((char*)string("(pre-process-run '("+LoadFile("../assets/jellyfish.scm")+"))").c_str());
+//    appEval((char*)string("(pre-process-run '((setup)))").c_str());
+  
+    //long w=0,h=0;
+    //unsigned char *tex=LoadPNG("material/textures/font.png",w,h);
+    //appLoadTexture("font.png",w,h,(char *)tex);
 
-    tex=LoadPNG("material/textures/icons.png",w,h);
-    appLoadTexture("icons.png",w,h,(char *)tex);
+    //tex=LoadPNG("material/textures/icons.png",w,h);
+    //appLoadTexture("icons.png",w,h,(char *)tex);
 
-    tex=LoadPNG("material/textures/squib.png",w,h);
-    appLoadTexture("squib.png",w,h,(char *)tex);
+    //tex=LoadPNG("material/textures/squib.png",w,h);
+    //appLoadTexture("squib.png",w,h,(char *)tex);
 
 #ifdef FLX_RPI
   while (!terminate_prog)

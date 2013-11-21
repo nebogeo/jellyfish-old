@@ -33,6 +33,12 @@
 #include <limits.h>
 #include <float.h>
 #include <ctype.h>
+#include <sys/time.h>
+#include <time.h>
+
+#ifdef ANDROID_NDK
+#include <android/log.h>
+#endif
 
 #include "../engine/engine.h"
 #include "../core/geometry.h"
@@ -43,6 +49,9 @@
 #endif
 
 char *starwisp_data = NULL;
+
+#include "core/idmap.h"
+idmap the_idmap;
 
 #if USE_STRCASECMP
 #include <strings.h>
@@ -2642,7 +2651,7 @@ static pointer opexe_0(scheme *sc, enum scheme_opcodes op) {
                for (x = car(closure_code(sc->code)), y = sc->args;
                     is_pair(x); x = cdr(x), y = cdr(y)) {
                     if (y == sc->NIL) {
-                         Error_0(sc,"not enough arguments");
+                         Error_1(sc,"not enough arguments", x);
                     } else {
                          new_slot_in_env(sc, car(x), car(y));
                     }
@@ -4240,11 +4249,6 @@ static pointer opexe_6(scheme *sc, enum scheme_opcodes op) {
      case OP_MACROP:          /* macro? */
           s_retbool(is_macro(car(sc->args)));
 ///////////// FLUXUS
-     case OP_SEND:
-          if (is_string(car(sc->args))) {
-               starwisp_data=string_value(car(sc->args));
-          }
-          s_return(sc,sc->F);
      case OP_PUSH:
          engine::get()->push(); s_return(sc,sc->F);
      case OP_POP:
@@ -4485,6 +4489,58 @@ static pointer opexe_6(scheme *sc, enum scheme_opcodes op) {
                                  ivalue(cadr(sc->args))|
                                  ivalue(caddr(sc->args))
                         ));
+     }
+
+
+     case OP_ALOG:
+          #ifdef ANDROID_NDK
+          __android_log_print(ANDROID_LOG_INFO, "starwisp", string_value(car(sc->args)));
+          #endif
+          s_return(sc,sc->F);
+     case OP_SEND:
+          if (is_string(car(sc->args))) {
+               starwisp_data=string_value(car(sc->args));
+          }
+          s_return(sc,sc->F);
+     case OP_TIME: {
+          	timeval t;
+            // stop valgrind complaining
+            t.tv_sec=0;
+            t.tv_usec=0;
+            gettimeofday(&t,NULL);
+            s_return(sc,cons(sc,mk_integer(sc,t.tv_sec),
+                             cons(sc,mk_integer(sc,t.tv_usec),sc->NIL)));
+     }
+     case OP_DATETIME: {
+          timeval t;
+          // stop valgrind complaining
+          t.tv_sec=0;
+          t.tv_usec=0;
+          gettimeofday(&t,NULL);
+
+          struct tm *now = gmtime((time_t *)&t.tv_sec);
+
+          /* note: now->tm_year is the number of years SINCE 1900.  On the year 2000, this
+             will be 100 not 0.  Do a man gmtime for more information */
+
+          s_return(sc,cons(sc,mk_integer(sc,now->tm_year + 1900),
+                           cons(sc,mk_integer(sc,now->tm_mon + 1),
+                                cons(sc,mk_integer(sc,now->tm_mday),
+                                     cons(sc,mk_integer(sc,now->tm_hour),
+                                          cons(sc,mk_integer(sc,now->tm_min),
+                                               cons(sc,mk_integer(sc,now->tm_sec), sc->NIL)))))));
+
+     }
+     case OP_ID_MAP_ADD: {
+          the_idmap.add(
+               string_value(car(sc->args)),
+               ivalue(cadr(sc->args)));
+          s_return(sc,sc->F);
+     }
+     case OP_ID_MAP_GET: {
+          s_return(
+               sc,mk_integer(sc,the_idmap.get(
+                               string_value(car(sc->args)))));
      }
 
 ////////////////////
