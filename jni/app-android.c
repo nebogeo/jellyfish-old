@@ -43,15 +43,19 @@ _getTime(void)
     return (long)(now.tv_sec*1000 + now.tv_usec/1000);
 }
 
-/* Call to initialize the graphics state */
 void
 Java_foam_jellyfish_Scheme_nativeInit( JNIEnv*  env )
 {
-    importGLInit();
     appInit();
-    gAppAlive    = 1;
-    sDemoStopped = 0;
-    sTimeOffsetInit = 0;
+}
+
+
+/* Call to initialize the graphics state */
+void
+Java_foam_jellyfish_Scheme_nativeInitGL( JNIEnv*  env )
+{
+    importGLInit();
+    initGL();
 }
 
 void

@@ -39,6 +39,7 @@ extern "C" {
 
 // The simple framework expects the application code to define these functions.
 extern void appInit();
+extern void initGL();
 extern void appDeinit();
 extern void appRender(long tick, int width, int height);
 extern void appEval(char *code);

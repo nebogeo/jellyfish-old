@@ -83,7 +83,6 @@ import org.json.JSONArray;
 public class StarwispBuilder
 {
     Scheme m_Scheme;
-
     public StarwispBuilder(Scheme scm) {
         m_Scheme = scm;
     }
@@ -128,7 +127,7 @@ public class StarwispBuilder
         }
     }
 
-    private void Callback(StarwispActivity ctx, int wid)
+    public void Callback(StarwispActivity ctx, int wid)
     {
         try {
             String ret=m_Scheme.eval("(widget-callback \""+
@@ -140,7 +139,7 @@ public class StarwispBuilder
         }
     }
 
-    private void CallbackArgs(StarwispActivity ctx, int wid, String args)
+    public void CallbackArgs(StarwispActivity ctx, int wid, String args)
     {
         try {
             String ret=m_Scheme.eval("(widget-callback \""+
@@ -376,6 +375,14 @@ public class StarwispBuilder
                 v.setId(wid);
                 v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(2)));
                 v.SetDrawList(arr.getJSONArray(3));
+                parent.addView(v);
+            }
+
+            if (type.equals("nomadic")) {
+                final int wid = arr.getInt(1);
+                NomadicSurfaceView v = new NomadicSurfaceView(ctx,wid);
+                v.setId(wid);
+                v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(2)));
                 parent.addView(v);
             }
 

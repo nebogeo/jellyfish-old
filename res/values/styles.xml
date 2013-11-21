@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-  <color name="bg">#aaaaaa</color>
-  <color name="text">#000000</color>
+  <color name="bg">#000000</color>
+  <color name="text">#ffffff</color>
   <color name="buttonbg">#ffffff</color>
 
   <style name="StarwispButton" parent="android:style/Widget.Button">
@@ -36,7 +36,7 @@
   <style name="StarwispTheme" parent="android:Theme.Light">
     <item name="android:textColor">@color/text</item>
     <item name="android:textColorLink">#005500</item>
-    <item name="android:windowBackground">@drawable/bg_style</item>
+    <item name="android:windowBackground">@color/bg</item>
     <item name="android:colorBackground">@color/bg</item>
     <item name="android:buttonStyle">@style/StarwispButton</item>
     <item name="android:seekBarStyle">@style/StarwispSeekBar</item>

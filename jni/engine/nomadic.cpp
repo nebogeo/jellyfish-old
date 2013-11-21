@@ -32,6 +32,22 @@ FILE *log_file=NULL;
 // Called from the app framework.
 void appInit()
 {
+    sc=scheme_init_new();
+
+    #ifdef FLX_LINUX
+    FILE *log_file=stdout;
+    #else
+    #ifdef FLX_RPI
+    FILE *log_file=stdout;
+    #else
+    FILE *log_file=fopen("/sdcard/jellyfish-log.txt","w");
+    #endif
+    #endif
+    if (log_file!=NULL) scheme_set_output_port_file(sc, log_file);
+}
+
+void initGL()
+{
     int a;
 
     glEnable(GL_DEPTH_TEST);
@@ -47,20 +63,7 @@ void appInit()
     glEnableClientState(GL_VERTEX_ARRAY);
 
     engine::init();
-    sc=scheme_init_new();
-
-    #ifdef FLX_LINUX
-    FILE *log_file=stdout;
-    #else
-    #ifdef FLX_RPI
-    FILE *log_file=stdout;
-    #else
-    FILE *log_file=fopen("/sdcard/nomadic-log.txt","w");
-    #endif
-    #endif
-    if (log_file!=NULL) scheme_set_output_port_file(sc, log_file);
 }
-
 
 // Called from the app framework.
 void appDeinit()
@@ -94,7 +97,7 @@ static void prepareFrame(int width, int height)
 
     glClearColorx((GLfixed)(engine::get()->m_clear_r * 65536),
                   (GLfixed)(engine::get()->m_clear_g * 65536),
-                  (GLfixed)(engine::get()->m_clear_b * 65536), 
+                  (GLfixed)(engine::get()->m_clear_b * 65536),
                   (GLfixed)(engine::get()->m_clear_a * 65536));
     glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 

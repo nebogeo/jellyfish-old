@@ -8,15 +8,16 @@
                  android:theme="@style/StarwispTheme"
                  >
 
-<!--                   android:noHistory="true" -->
         <activity android:name="starwisp"
                   android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+                <category android:name="tv.ouya.intent.category.GAME"/>
+           </intent-filter>
         </activity>
-        <activity android:name="MainActivity"></activity>
+        <activity android:name="FloatValueActivity"></activity>
+        <activity android:name="InstrButtonsActivity"></activity>
 
         <receiver android:name=".UpdateReceiver" >
           <intent-filter>

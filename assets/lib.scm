@@ -368,6 +368,11 @@
 (define (canvas-layout t) (list-ref t 2))
 (define (canvas-drawlist t) (list-ref t 3))
 
+(define (nomadic id layout listener) (list "nomadic" id layout listener))
+(define (nomadic-id t) (list-ref t 1))
+(define (nomadic-layout t) (list-ref t 2))
+(define (nomadic-listener t) (list-ref t 3))
+
 (define (drawlist-line colour width points) (list "line" colour width points))
 (define (drawlist-text text x y colour size align) (list "text" text x y colour size align))
 
@@ -560,7 +565,7 @@
     (if (not activity)
         (begin (display "no activity called ")(display activity-name)(newline))
         (let ((widget (widget-find (cons (activity-layout activity) dynamic-widgets) widget-id)))
-          ;;(display widget)(newline)
+          (display "callback runing:") (display widget)(newline)
           (if (not widget)
               (begin (display "no widget ")(display widget-id)(display " in ")(display activity-name)(newline))
               (let ((events
@@ -575,6 +580,8 @@
                        ((seek-bar-listener widget) (car args)))
                       ((equal? (widget-type widget) "spinner")
                        ((spinner-listener widget) (car args)))
+                      ((equal? (widget-type widget) "nomadic")
+                       ((nomadic-listener widget)))
                       (else (display "no callbacks for type ")
                             (display (widget-type widget))(newline)))))
                 (update-dialogs! events)

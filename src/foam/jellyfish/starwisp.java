@@ -56,8 +56,9 @@ public class starwisp extends StarwispActivity
 {
     static {
         // register all activities here
-        ActivityManager.Register("splash",starwisp.class);
-        ActivityManager.Register("main",MainActivity.class);
+        ActivityManager.Register("main",starwisp.class);
+        ActivityManager.Register("instr-buttons",InstrButtonsActivity.class);
+        ActivityManager.Register("float-value",FloatValueActivity.class);
     };
 
     NetworkManager nm;
@@ -119,7 +120,7 @@ public class starwisp extends StarwispActivity
         // build static things
         m_Scheme = new Scheme(this);
         m_Builder = new StarwispBuilder(m_Scheme);
-        m_Name = "splash";
+        m_Name = "main";
 
         // tell scheme the date
         final Calendar c = Calendar.getInstance();
@@ -131,7 +132,7 @@ public class starwisp extends StarwispActivity
         m_Scheme.eval("(define dirname \"/sdcard/"+dirname+"\")(define date-day "+day+") (define date-month "+month+") (define date-year "+year+")");
 
         Log.i("starwisp","started, now running starwisp.scm...");
-        m_Scheme.eval(m_Scheme.readRawTextFile(this, "starwisp.scm"));
+        m_Scheme.evalPre(m_Scheme.readRawTextFile(this, "starwisp.scm"));
 
         super.onCreate(savedInstanceState);
     }

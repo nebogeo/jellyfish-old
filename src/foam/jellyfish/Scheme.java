@@ -29,8 +29,12 @@ public class Scheme
     static public Lock mLock = new Lock();
 
     private static native void nativeInit();
+    private static native void nativeInitGL();
     private static native void nativeDone();
     private static native String nativeEval(String code);
+    private static native void nativeResize(int w, int h);
+    private static native void nativeRender();
+    private static native void nativeLoadTexture(String texname, byte[] arr, int w, int h);
 
     static {
         System.loadLibrary("starwisp-core");
@@ -41,13 +45,31 @@ public class Scheme
         nativeInit();
         Log.i("starwisp","started, now running init.scm...");
         eval(readRawTextFile(ctx, "init.scm"));
+        Log.i("starwisp","running lib.scm...");
         eval(readRawTextFile(ctx, "lib.scm"));
+        Log.i("starwisp","running boot.scm...");
+        eval(readRawTextFile(ctx, "boot.scm"));
+        Log.i("starwisp","done.");
     }
 
-    public String eval(String code) {
+    public static void initGL() { synchronized (mLock) { nativeInitGL(); } }
+    public static void resize(int w, int h) { synchronized (mLock) { nativeResize(w,h); } }
+    public static void render() { synchronized (mLock) { nativeRender(); } }
+    public static void loadTexture(String texname, byte[] arr, int w, int h) { synchronized (mLock) { nativeLoadTexture(texname,arr,w,h); } }
+
+    public static String eval(String code) {
+        Log.i("starwisp","evaling 1");
         synchronized (mLock)
         {
             return nativeEval(code);
+        }
+    }
+
+    public static String evalPre(String code) {
+        Log.i("starwisp","evaling 1");
+        synchronized (mLock)
+        {
+            return nativeEval("(pre-process-run '("+code+"))");
         }
     }
 
@@ -60,13 +82,26 @@ public class Scheme
             inRd =
                 new BufferedReader(new InputStreamReader
                                    (ctx.getAssets().open(fn)));
+//            String ret="";
             String text;
+            int read=0;
             while ((text = inRd.readLine()) != null) {
+//                Log.i("starwisp","READ: "+text);
+
+                read+=text.length()+1;
                 inLine.append(text);
                 inLine.append("\n");
+
+//                ret+=text;
+///                ret+="\n";
             }
 
-            return inLine.toString();
+            String ret = inLine.toString();
+
+            Log.i("starwisp","tostring : "+ret.length()+" vs "+read);
+//            Log.i("starwisp",""+inLine.length());
+            return ret;
+
         }
         catch (IOException e)
         {
