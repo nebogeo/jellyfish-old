@@ -125,7 +125,7 @@ void jellyfish::run()
 	case STA: poke(argiy+argiz,pop()); break;
 	case STI: poke(peekix(argiy)+argiz,pop()); break;
 	case NRM: push(pop().normalise()); break;
-	case ADDX: { m_heap[argiy%m_heap_size].x+=1.0f; } break;
+	case ADDX: { m_heap[argiy%m_heap_size].x+=c.z; } break;
 	case ADDY: { m_heap[argiy%m_heap_size].y+=c.z; } break;
 	case ADDZ: { m_heap[argiy%m_heap_size].z+=c.z; } break;
  	case ADD: push(pop()+pop()); break;
@@ -191,6 +191,19 @@ void jellyfish::run()
 	case DBG:
     {
         msg_vec(pop());
+    } break;
+    case SWP:
+    {
+        vec3 a=pop();
+        vec3 b=pop();
+        push(a);
+        push(b);
+    } break;
+    case RND:
+    {
+        push(vec3((rand()%9999/9999.0)-0.5,
+                  (rand()%9999/9999.0)-0.5,
+                  (rand()%9999/9999.0)-0.5));
     } break;
     default: set_instr(pc,false);
    	};

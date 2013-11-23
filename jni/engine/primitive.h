@@ -27,7 +27,7 @@
 class primitive
 {
 public:
-    enum type {TRIANGLES,TRISTRIP};
+    enum type {TRIANGLES,TRISTRIP,POINTS,LINES,LINESTRIP};
     primitive(unsigned int size, type t);
     primitive();
     ~primitive();

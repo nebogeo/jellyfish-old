@@ -190,7 +190,10 @@ void scenegraph::render_node_walk(scenenode *node, int depth)
     // global render hints settings
     if (node->m_hints&HINT_UNLIT) glDisable(GL_LIGHTING);
     else glEnable(GL_LIGHTING);
-    glLineWidth(node->m_line_width);
+
+    // not supported on gles
+    //glLineWidth(node->m_line_width);
+    //glPointSize(node->m_line_width); // ok to share this??
 	if (node->m_hints&HINT_NOZWRITE) glDepthMask(false);
     else glDepthMask(true);
 	if (node->m_hints&HINT_IGNORE_DEPTH) glDisable(GL_DEPTH_TEST);

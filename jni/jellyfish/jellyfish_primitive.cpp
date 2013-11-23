@@ -51,17 +51,30 @@ jellyfish_primitive::~jellyfish_primitive()
 
 }
 
-void jellyfish_primitive::render(u32 hints)
-{
+void jellyfish_primitive::execute() {
     for (int i=0; i<m_machine->peekiy(REG_CONTROL); i++) {
         m_machine->run();
 //        m_machine->pretty_dump();
     }
+}
 
-//    sleep(10);
+void jellyfish_primitive::render(u32 hints)
+{
+    execute();
+
+    switch (m_machine->peekiy(REG_GRAPHICS))
+    {
+    case TRIANGLES: m_type=GL_TRIANGLES; break;
+    case TRISTRIP: m_type=GL_TRIANGLE_STRIP; break;
+    case POINTS: m_type=GL_POINTS; break;
+    case LINES: m_type=GL_LINES; break;
+    case LINESTRIP: m_type=GL_LINE_STRIP; break;
+    default: m_type=GL_TRIANGLES;
+    }
 
     u32 size=m_size;
     m_size=m_machine->peekix(REG_GRAPHICS);
+    hints=m_machine->peekiz(REG_GRAPHICS);
     primitive::render(hints);
     m_size=size;
 }

@@ -56,13 +56,16 @@
 #define ADDX 29
 #define ADDY 30
 #define ADDZ 31
+#define SWP 32
+#define RND 33
+
 
 // registers
 #define REG_CONTROL 0   // pc, cycles, stack
 #define REG_GRAPHICS 1  // size, [type, tex]
 #define REG_POSITION 2
 #define REG_SENSOR_ADDR 3
-#define REG_STK 1023
+#define REG_STK 511
 #define REG_MDL 512
 
 class jellyfish

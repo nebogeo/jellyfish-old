@@ -78,22 +78,30 @@
     (list
      (nomadic (make-id "b2x") (layout 2048 1024 1 'left 0) 
               (lambda () 
-                (display "hello from nomadic callback")(newline)
-                (with-state
-                 (hint-unlit)
-                 (set! jelly (build-jellyfish 512)))
-                (with-primitive
-                 jelly
-                 (pdata-index-map!
-                  (lambda (i c)
-                    (let ((ir (modulo (* i 4) (pdata-size)))
-                          (ig (modulo (* i 20) (pdata-size)))
-                          (ib (modulo (* i 3) (pdata-size))))
-                      (vmul (vector (/ ir (pdata-size))
-                                    (/ ig (pdata-size))
-                                    (/ ib (pdata-size))) 0.5)))
-                  "c")
-                 (jelly-prog v2-test))
+  (display "hello from nomadic callback")(newline)
+
+  (with-state
+   (hint-unlit)
+   (set! jelly (build-jellyfish 512)))
+
+  (with-primitive
+   jelly
+   (line-width 5)
+   (pdata-map! (lambda (c) (vector 0.8 1 0.2)) "c")
+   (jelly-prog explode))
+
+  (with-state
+   (hint-unlit)
+   (set! jelly (build-jellyfish 512)))
+
+  (with-primitive
+   jelly
+   (line-width 5)
+   (pdata-map! (lambda (c) (vector 1 0.3 0.7)) "c")
+   (jelly-prog explode))
+
+
+
                 ))
      (scroll-view
       (make-id "scroller")
