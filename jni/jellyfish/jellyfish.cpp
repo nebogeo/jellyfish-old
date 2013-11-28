@@ -92,11 +92,6 @@ vec3 jellyfish::pop()
     return data;
 }
 
-vec3 jellyfish::top()
-{
-    return peek(peekiz(REG_CONTROL)+REG_STK-1);
-}
-
 void jellyfish::run()
 {
     // get pc
@@ -116,12 +111,18 @@ void jellyfish::run()
 	{
     case NOP: break;
     case JMP: pokex(REG_CONTROL,argiy-1); break;
+    case JMR: pokex(REG_CONTROL,pc+argiy-1); break;
     case JMZ: if ((float)pop().x==0) pokex(REG_CONTROL,pc+argiy-1); break;
 	case JLT: if ((float)pop().x<(float)pop().x) pokex(REG_CONTROL,pc+argiy-1); break;
     case JGT: if ((float)pop().x>(float)pop().x) pokex(REG_CONTROL,pc+argiy-1); break;
 	case LDL: push(vec3(c.y,0,0)); break;
 	case LDA: push(peek(argiy)+argiz); break;
 	case LDI: push(peek(peekix(argiy)+argiz)); break;
+    case LDLV:
+    { 
+        push(peek(pc+1));
+        pokex(REG_CONTROL,peekix(REG_CONTROL)+1);
+    } break;
 	case STA: poke(argiy+argiz,pop()); break;
 	case STI: poke(peekix(argiy)+argiz,pop()); break;
 	case NRM: push(pop().normalise()); break;
@@ -161,7 +162,8 @@ void jellyfish::run()
 	case CRS: push(pop().cross(pop())); break;
 	case SQR: push(vec3(sqrt((float)pop().x),0,0)); break;
 	case LEN: push(vec3(pop().mag(),0,0)); break;
-	case DUP: push(top()); break;
+	case LENSQ: push(vec3(pop().magsq(),0,0)); break;
+	case DUP: { vec3 t=pop(); push(t); push(t); } break;
     case DRP: pop(); break;
 	case CMP: push(vec3(pop().x,pop().x,pop().x)); break;
 	case SHF:
@@ -204,6 +206,11 @@ void jellyfish::run()
         push(vec3((rand()%9999/9999.0)-0.5,
                   (rand()%9999/9999.0)-0.5,
                   (rand()%9999/9999.0)-0.5));
+    } break;
+	case MULL:
+    {
+        vec3 v=pop();
+        push(v*c.y);
     } break;
     default: set_instr(pc,false);
    	};
@@ -264,7 +271,7 @@ void jellyfish::pretty_dump() const
 	}
 
     printf("-- stk -- stk:%d\n",stop);
-	for (u32 n=(REG_STK-stop)-2; n<(REG_STK-stop)+2; n++)
+	for (u32 n=(REG_STK-stop)-2; n<(REG_STK-stop)+5; n++)
 	{
         char txt[2048];
         if (n==REG_STK-stop)
@@ -320,6 +327,14 @@ void jellyfish::print_instr(s32 addr) const
         case SHF: printf("shf"); break;
         case BLD: printf("bld"); break;
         case RET: printf("ret"); break;
+        case DBG: printf("dbg"); break;
+        case NRM: printf("nrm"); break;
+        case ADDX: printf("add.x"); break;
+        case ADDY: printf("add.y"); break;
+        case ADDZ: printf("add.z"); break;
+        case SWP: printf("swp"); break;
+        case RND: printf("rnd"); break;
+        case MULL: printf("mull"); break;
         default: printf("%f", (float)i.x); break;
         };
 

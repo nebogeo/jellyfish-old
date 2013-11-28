@@ -5,9 +5,9 @@
 (define add 10) (define sub 11) (define mul 12) (define div 13) (define abs 14)
 (define _sin 15) (define atn 16) (define dot 17) (define crs 18) (define sqr 19)
 (define len 20) (define dup 21) (define drp 22) (define cmp 23) (define shf 24)
-(define bld 25) (define ret 26) (define dbg 27) (define nrm 28)
+(define bld 25) (define ret 26) (define _dbg 27) (define nrm 28)
 (define add.x 29) (define add.y 30) (define add.z 31) (define end-check 999)
-(define swp 32) (define rnd 33)
+(define swp 32) (define rnd 33) (define mull 34) (define jmr 35) (define ldlv 36)
 
 (define prim-triangles 0)
 (define prim-tristrip 1)
@@ -43,6 +43,14 @@
          (set! addr (+ addr 1)))
        (cadr p)))
      (else (display "end check wrong ") (display p) (newline)))))
+
+(define (jelly-compiled code)
+  (define addr 0)
+  (for-each
+   (lambda (v)
+     (pdata-set! "x" addr v)
+     (set! addr (+ addr 1)))
+   code))
 
 (define v2-test
   (list
@@ -94,9 +102,9 @@
 
 (define mdl-size 512)
 (define mdl-start mdl-size)
-(define mdl-end (+ mdl-size 60))
+(define mdl-end (+ mdl-size 20))
 
-(define explode
+(define banner
   (list
    ;; register section
    8 20000 0 ;; control (pc, cycles, stack)
@@ -174,6 +182,99 @@
    end-check))
 
 
+(define explode
+  (list
+   ;; register section
+   8 30000 0 ;; control (pc, cycles, stack)
+   mdl-size prim-points 1 ;; graphics (size, primtype, renderhints)
+   0 0 0 ;; pos
+   0 0 0 ;; sensor addr
+
+   ;; program data section
+   mdl-start 0 0     ;; 4 address of current vertex
+   mdl-start 0 0     ;; 5 address of accum vertex (loop)
+   0 0 0             ;; 6 influence
+   9999999 0 0             ;; 7 closest
+
+   ;; code section 
+   ;; add up differences with every other vertex
+   ldi  4  0         ;; load current vertex
+   ldi  5  0         ;; load accum vertex
+   sub  0  0         ;; get the difference
+   
+   lda  4 0          ;; are we looking at the current
+   lda  5 0          ;; vertex??
+   sub  0 0       
+   jmz  10 0          ;; skip next section
+
+   ; find the closest vertex
+   dup  0  0         ;; dup the difference
+   dup  0  0         
+   len  0  0         ;; get the length
+   lda  7  0         ;; load the closest dist
+   len  0  0         ;; get the length
+   jlt  3  0         ;; if it's less
+   sta  7  0         ;; then store it in closest dist
+   jmr  2  0
+   drp  0  0         ;; forget it
+   
+   lda  6  0         ;; load the accumulation
+   add  0  0         ;; accumulate
+   nrm  0  0         ;; normalise
+   sta  6  0         ;; store accumulation
+   add.x 5 1         ;; inc accum address
+
+   ;; accumulation iteration 
+   lda  5  0         ;; load accum address
+   ldl  mdl-end 0    ;; load end address
+   jlt  2  0         ;; exit if greater than model end (relative address)
+   jmp  8  0         ;; return to accum-loop
+
+   ;; end accum loop
+   ;; attact to other verts
+;   lda 6  0          ;; load accum
+   ldi 4 0
+   ldl 0 0
+   sub 0 0
+   ldl 0.01 0         ;; reverse & make smaller
+   mul 0 0
+
+   ;; repel from closest vertex
+   lda 7 0
+   nrm 0 0
+   ldl -0.01 0
+   mul 0 0           ;; make smaller
+   add 0 0           ;; add to accum result
+   ldl 9999 0        ;; reset closest
+   sta 7 0
+
+   ;; do the animation
+   ldi 4 0           ;; load current vertex
+   add 0 0           ;; add the accumulation
+   sti 4 0           ;; write to model data
+
+   ;; reset the outer loop
+   ldl 0 0           ;; load zero
+   sta 6 0           ;; reset accum
+   ldl mdl-start 0   
+   sta 5 0           ;; reset accum address
+
+
+   add.x 4 1         ;; inc vertex address
+   lda 4  0          ;; load vertex address
+   ldl mdl-end 0     ;; load end address
+   jlt 2  0          ;; if greater than model (relative address)
+   jmp 8  0          ;; do next vertex
+
+   ;; end: reset current vertex back to start
+   ldl mdl-start 0
+   sta 4 0
+ 
+
+   jmp 8 0          
+   end-check))
+
+
 (define jelly 0)
 
 (display "inside jf")(newline)
@@ -184,23 +285,75 @@
    (hint-unlit)
    (set! jelly (build-jellyfish 512)))
 
+ ; '(let ((vertex 512) (src 0) (pull 0))
+ ;    (loop (< vertex 1024)
+ ;          (set! src (+ vertex 1))
+ ;          (set! pull (* (- (read vertex) (read src)) 0.01))
+ ;          (set! pull (+ pull (* (rndvec) 0.01)))
+ ;          (write! vertex (+ (read vertex) pull))
+ ;          (set! vertex (+ vertex 1)))
+     
+
   (with-primitive
    jelly
    (line-width 5)
+
    (pdata-map! (lambda (c) (vector 0.8 1 0.2)) "c")
-   (jelly-prog explode))
+   (pdata-index-map! (lambda (i p) (if (< i 20) (vector (* i -1.1) 0 0) p)) "p")
+   (pdata-map! (lambda (n) (vmul (vector (crndf) (crndf) 0) 0.001)) "n")
+   ;(jelly-prog explode)
+   
+   (let ((p (compile-program 
+             30000 prim-points
+             '(let ((vertex 512) 
+                    (accum-vertex 512)  
+                    (closest 9999)
+                    (closest-dist 9999)
+                    (diff 0)
+                    (vel 1024))
+                (loop 1 ;; infinite loop
+                 (loop (< vertex 532) ;; for every vertex
 
-  (with-state
-   (hint-unlit)
-   (set! jelly (build-jellyfish 512)))
+                  ;; accumulate over every vertex
+                  (loop (< accum-vertex 532) 
+                   (cond 
+                    ;; if they're not the same vert
+                    ((not (eq? accum-vertex vertex))
+                     ;; get vector between the points
+                     (set! diff (- (read vertex) (read accum-vertex)))
+                     (cond 
+                      ;; if it's closer so far
+                      ((< (mag diff) closest-dist)
+                       ;; record vector and distance
+                       (set! closest diff)
+                       (set! closest-dist (mag closest))))))
+                   (set! accum-vertex (+ accum-vertex 1)))
+                  ;; reset accum-vertex for next time
+                  (set! accum-vertex 512)
 
-  (with-primitive
-   jelly
-   (pdata-map! (lambda (c) (vector 1 0.3 0.7)) "c")
-   (line-width 5)
-   (jelly-prog explode))
-
-)
+                  ;; calculate velocity as blend with previous
+                  (write! vel (+ (* (read vel) 0.99)
+                                 ;; attract to centre
+                                 (* (+ (* (- (read vertex) (vector 0 0 0)) 0.05)
+                                       ;; repel from closest vertex
+                                       (* (normalise closest) -0.15)) 0.01)))
+                  ;; add velocity to vertex position
+                  (write! vertex (+ (read vel) (read vertex))) 
+                 
+                  ;; reset and increment stuff
+                  (set! closest-dist 9999)
+                  (set! vel (+ vel 1))
+                  (set! vertex (+ vertex 1)))
+                 ;; reset for main loop
+                 (set! vertex 512)
+                 (set! vel 1024))
+                ))))
+     (disassemble p)
+     (jelly-compiled p))
+   
+   )
+  
+  )
 
 (define aaa 99)
 

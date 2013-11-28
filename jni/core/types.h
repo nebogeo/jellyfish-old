@@ -35,6 +35,7 @@ typedef Fixed x32;
 #ifdef FLX_LINUX
 //-Linux--------------------------------
 #define flx_real x32
+//#define flx_real float
 
 #else
 #ifdef _EE

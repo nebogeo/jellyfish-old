@@ -160,12 +160,16 @@ public:
 
     inline flx_real mag()
     {
-        return sqrt(x*x+y*y+z*z);
+        // tendancy to blow up (overflow) in fixed...
+        return sqrt((float)x*(float)x+(float)y*(float)y+(float)z*(float)z);
     }
     
     inline flx_real magsq()
     {
-        return x*x+y*y+z*z;
+        float xx=x;
+        float yy=y;
+        float zz=z;
+        return ((xx*xx)+(yy*yy)+(zz*zz));
     }
 	
     inline bool feq(const vec3 &other, flx_real epsilon=0.001)

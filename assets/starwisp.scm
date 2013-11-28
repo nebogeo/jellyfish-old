@@ -76,7 +76,7 @@
     (layout 'fill-parent 'fill-parent 1 'left 0)
 
     (list
-     (nomadic (make-id "b2x") (layout 2048 1024 1 'left 0) 
+     (nomadic (make-id "b2x") (layout 1024 524 1 'left 0) 
               (lambda () 
   (display "hello from nomadic callback")(newline)
 
@@ -88,19 +88,13 @@
    jelly
    (line-width 5)
    (pdata-map! (lambda (c) (vector 0.8 1 0.2)) "c")
+
+   (pdata-index-map! 
+    (lambda (i p) 
+      (if (< i 20) 
+          (vmul (vector (crndf) (crndf) 0) 1) p)) "p")
+
    (jelly-prog explode))
-
-  (with-state
-   (hint-unlit)
-   (set! jelly (build-jellyfish 512)))
-
-  (with-primitive
-   jelly
-   (line-width 5)
-   (pdata-map! (lambda (c) (vector 1 0.3 0.7)) "c")
-   (jelly-prog explode))
-
-
 
                 ))
      (scroll-view

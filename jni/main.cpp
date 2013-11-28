@@ -432,7 +432,9 @@ int main(int argc, char *argv[])
     appEval((char*)LoadFile("../assets/init.scm").c_str());
     appEval((char*)LoadFile("../assets/boot.scm").c_str());
     appEval((char*)LoadFile("../assets/lib.scm").c_str());
+    appEval((char*)LoadFile("../assets/compiler.scm").c_str());
     appEval((char*)string("(pre-process-run '("+LoadFile("../assets/jellyfish.scm")+"))").c_str());
+
 //    appEval((char*)string("(pre-process-run '((setup)))").c_str());
   
     //long w=0,h=0;

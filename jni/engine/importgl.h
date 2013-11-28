@@ -72,6 +72,8 @@ extern "C" {
 #endif
 
 #include <GLES/gl.h>
+//#include <GLES2/gl2.h>
+//#include <GLES2/gl2ext.h>
 #ifndef ANDROID_NDK
 #include <GLES/egl.h>
 #endif /* !ANDROID_NDK */

@@ -58,7 +58,10 @@
 #define ADDZ 31
 #define SWP 32
 #define RND 33
-
+#define MULL 34
+#define JMR 35
+#define LDLV 36
+#define LENSQ 37
 
 // registers
 #define REG_CONTROL 0   // pc, cycles, stack
@@ -68,8 +71,8 @@
 #define REG_STK 511
 #define REG_MDL 512
 
-class jellyfish
-{
+class jellyfish {
+
 public:
 	jellyfish(vec3 *heap_ptr, u32 heap_size);
 	~jellyfish();
@@ -89,7 +92,6 @@ public:
 
     void push(const vec3 &data);
     vec3 pop();
-    vec3 top();
 
 	void run();
 	void simple_dump() const;

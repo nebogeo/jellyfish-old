@@ -27,6 +27,7 @@ public:
     ~jellyfish_primitive();
 
     virtual void build();
+    virtual void execute();
     virtual void render(u32 hints);
 
 private:
