@@ -51,6 +51,8 @@ public class Scheme
         eval(readRawTextFile(ctx, "jellyfish.scm"));
         Log.i("starwisp","running boot.scm...");
         eval(readRawTextFile(ctx, "boot.scm"));
+        Log.i("starwisp","running compiler.scm...");
+        eval(readRawTextFile(ctx, "compiler.scm"));
         Log.i("starwisp","done.");
     }
 

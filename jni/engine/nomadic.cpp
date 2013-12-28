@@ -95,11 +95,11 @@ static void prepareFrame(int width, int height)
 
     engine::get()->set_screensize(width,height);
 
-    glClearColorx((GLfixed)(engine::get()->m_clear_r * 65536),
-                  (GLfixed)(engine::get()->m_clear_g * 65536),
-                  (GLfixed)(engine::get()->m_clear_b * 65536),
-                  (GLfixed)(engine::get()->m_clear_a * 65536));
-    glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+//    glClearColorx((GLfixed)(engine::get()->m_clear_r * 65536),
+//                  (GLfixed)(engine::get()->m_clear_g * 65536),
+//                  (GLfixed)(engine::get()->m_clear_b * 65536),
+//                  (GLfixed)(0.5 * 65536));
+    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();

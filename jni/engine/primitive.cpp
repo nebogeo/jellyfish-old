@@ -265,6 +265,8 @@ void primitive::render(u32 hints)
     glEnableClientState(GL_COLOR_ARRAY);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
+    glColor3f(1,1,1);
+
     if (hints&HINT_SOLID)
     {
         glDrawArrays(m_type, 0, m_size);

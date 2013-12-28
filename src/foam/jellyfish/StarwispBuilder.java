@@ -558,6 +558,7 @@ public class StarwispBuilder
                 NomadicSurfaceView v = new NomadicSurfaceView(ctx,wid);
                 v.setId(wid);
                 v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(2)));
+
                 parent.addView(v);
          }
 

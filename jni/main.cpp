@@ -437,7 +437,7 @@ int main(int argc, char *argv[])
 
 //    appEval((char*)string("(pre-process-run '((setup)))").c_str());
   
-    //long w=0,h=0;
+    long w=0,h=0;
     //unsigned char *tex=LoadPNG("material/textures/font.png",w,h);
     //appLoadTexture("font.png",w,h,(char *)tex);
 
@@ -446,6 +446,10 @@ int main(int argc, char *argv[])
 
     //tex=LoadPNG("material/textures/squib.png",w,h);
     //appLoadTexture("squib.png",w,h,(char *)tex);
+
+    unsigned char *tex=LoadPNG("../assets/14.png",w,h);
+    appLoadTexture("14.png",w,h,(char *)tex);
+
 
 #ifdef FLX_RPI
   while (!terminate_prog)

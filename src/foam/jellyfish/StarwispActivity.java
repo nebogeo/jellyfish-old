@@ -145,4 +145,5 @@ public class StarwispActivity extends FragmentActivity
     protected void onSaveInstanceState(Bundle outState) {
         //No call for super(). Bug on API Level > 11.
     }
+
 }

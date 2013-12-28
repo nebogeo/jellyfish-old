@@ -62,6 +62,10 @@
 #define JMR 35
 #define LDLV 36
 #define LENSQ 37
+#define NOISE 38
+#define LDS 39
+#define STS 40
+#define MULV 41
 
 // registers
 #define REG_CONTROL 0   // pc, cycles, stack

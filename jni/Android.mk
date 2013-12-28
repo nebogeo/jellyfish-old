@@ -11,6 +11,7 @@ LOCAL_SRC_FILES := \
 	core/fixed.cpp \
 	core/geometry.cpp \
 	core/idmap.cpp \
+	core/noise.cpp \
 	engine/primitive.cpp \
 	engine/text_primitive.cpp \
 	engine/scenenode.cpp \

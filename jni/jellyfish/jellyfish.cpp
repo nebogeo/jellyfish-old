@@ -18,6 +18,7 @@
 #include "jellyfish.h"
 #include <stdlib.h>
 #include "core/msg.h"
+#include "core/noise.h"
 
 jellyfish::jellyfish(vec3 *heap_ptr, u32 heap_size) :
     m_heap(heap_ptr),
@@ -117,7 +118,9 @@ void jellyfish::run()
     case JGT: if ((float)pop().x>(float)pop().x) pokex(REG_CONTROL,pc+argiy-1); break;
 	case LDL: push(vec3(c.y,0,0)); break;
 	case LDA: push(peek(argiy)+argiz); break;
-	case LDI: push(peek(peekix(argiy)+argiz)); break;
+ 	case LDI: push(peek(peekix(argiy)+argiz)); break;
+    // load from address on the stack
+ 	case LDS: push(peek((int)pop().x)); break;
     case LDLV:
     { 
         push(peek(pc+1));
@@ -125,6 +128,12 @@ void jellyfish::run()
     } break;
 	case STA: poke(argiy+argiz,pop()); break;
 	case STI: poke(peekix(argiy)+argiz,pop()); break;
+    // store to address on the stack (consumes two vecs, addr topmost)
+ 	case STS: {
+        vec3 addr=pop();
+        vec3 data=pop();
+        poke((int)addr.x,data);
+    } break;
 	case NRM: push(pop().normalise()); break;
 	case ADDX: { m_heap[argiy%m_heap_size].x+=c.z; } break;
 	case ADDY: { m_heap[argiy%m_heap_size].y+=c.z; } break;
@@ -142,6 +151,14 @@ void jellyfish::run()
         vec3 m=pop();
         vec3 v=pop();
         push(v*(float)m.x);
+    } break;
+	case MULV:
+    {
+        vec3 m=pop();
+        vec3 v=pop();
+        push(vec3(v.x*(float)m.x,
+                  v.y*(float)m.y,
+                  v.z*(float)m.z));
     } break;
 	case DIV: {
         float v=(float)pop().x;
@@ -189,7 +206,11 @@ void jellyfish::run()
         }
         push(ret);
     } break;
-	case RET: pokex(REG_CONTROL,(int)pop().x); break;
+	case RET: {
+        int addr=(int)pop().x-1;
+        //printf("RET to %d\n",addr);
+        pokex(REG_CONTROL,addr); 
+    } break;
 	case DBG:
     {
         msg_vec(pop());
@@ -207,10 +228,16 @@ void jellyfish::run()
                   (rand()%9999/9999.0)-0.5,
                   (rand()%9999/9999.0)-0.5));
     } break;
-	case MULL:
+ 	case MULL:
     {
         vec3 v=pop();
         push(v*c.y);
+    } break;
+ 	case NOISE:
+    {
+        vec3 v=pop();
+        float n=Noise::noise(v.x,v.y,v.z);
+        push(vec3(n,n,n));
     } break;
     default: set_instr(pc,false);
    	};

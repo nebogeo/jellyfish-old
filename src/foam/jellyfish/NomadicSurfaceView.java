@@ -44,23 +44,33 @@ import java.io.FileNotFoundException;
 import android.opengl.GLSurfaceView;
 import android.view.MotionEvent;
 import android.content.DialogInterface;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.GestureDetector;
+import android.view.GestureDetector.SimpleOnGestureListener;
 
 class NomadicSurfaceView extends GLSurfaceView {
 
-    NomadicRenderer mRenderer;
+    public NomadicRenderer mRenderer;
     Context mAct;
     String mFilename;
+    GestureDetector mGestures;
 
     public NomadicSurfaceView(StarwispActivity context, int id) {
         super(context);
-        Log.i("starwisp","creaeting surface view");
+        Log.i("starwisp","creating surface view");
         mAct = context;
-        mFilename="";
+        mFilename="";        
+        mGestures = new GestureDetector(context, new GestureListener());  
         mRenderer = new NomadicRenderer(context, id);
         setRenderer(mRenderer);
     }
 
     public boolean onTouchEvent(MotionEvent event) {
+        mGestures.onTouchEvent(event);
+        return true;
+
+/*
         final int pointerCount = event.getPointerCount();
         String code="(input-touches (list ";
         for (int p = 0; p < pointerCount; p++) {
@@ -68,14 +78,32 @@ class NomadicSurfaceView extends GLSurfaceView {
         }
         code+="))";
 
+        Log.i("starwisp","touch event...");
+
         //mRenderer.eval(code);
 
         if (event.getAction() == MotionEvent.ACTION_DOWN)
         {
 
         }
-        return true;
+        return false;
+*/
     }
+
+
+    private class GestureListener 
+        extends GestureDetector.SimpleOnGestureListener 
+    {  
+        public GestureListener() {}
+
+        @Override  
+        public boolean onFling(MotionEvent e1, MotionEvent e2,  
+                               final float vx, final float vy) {  
+            Scheme.eval("(on-fling "+vx+" "+vy+")");
+            return true;  
+        }  
+    }  
+
 
     private static native void nativePause();
 }

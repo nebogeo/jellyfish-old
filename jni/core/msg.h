@@ -47,7 +47,7 @@ inline void msg(const char *str)
 
 inline void msg(const char *str)
 {
-    __android_log_write(ANDROID_LOG_ERROR,"Fluxus",str);
+    __android_log_write(ANDROID_LOG_ERROR,"starwisp",str);
 }
 
 #endif

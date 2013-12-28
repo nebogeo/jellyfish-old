@@ -1,9 +1,12 @@
 ;; [ Copyright (C) 2011 Dave Griffiths : GPLv2 see LICENCE ]
 
+(display "boot.scm")(newline)
+
 (define frame-thunk '())
 (define flx_time 0)
 (define _touching #f)
 (define _touches '())
+(define _fling (vector 0 0))
 
 ;(define-macro (every-frame . args)
 ;  `(begin (set! frame-thunk (lambda () ,@args))))
@@ -13,7 +16,9 @@
   (if (not (null? frame-thunk))
       (frame-thunk))
   (set! _touches '())
-  (set! _touching #f))
+  (set! _touching #f)
+  (vector-set! _fling 0 0)
+  (vector-set! _fling 1 0))
 
 (define triangles 0)
 (define triangle-strip 1)
@@ -84,9 +89,9 @@
   (set! keys '()))
 
 (define (update-input)
-	(set! keys-this-frame '())
-	(set! special-keys-this-frame '())
-	(set! mouse-wheel-v 0))
+  (set! keys-this-frame '())
+  (set! special-keys-this-frame '())
+  (set! mouse-wheel-v 0))
 
 (define (register-down key button special state x y mod)
   (when (not (or (number? key) (eq? key -1))) ; ordinary keypress
@@ -178,6 +183,11 @@
          r))
    '(0 0)
    _touches))
+
+(define (on-fling vx vy)
+  (vector-set! _fling 0 vx)
+  (vector-set! _fling 1 vy))
+
 
 ;------------------------------------------------------------
 
@@ -511,8 +521,6 @@
             (diy-macro i)))
       s))
     (else s)))
-
-(display "evaled boot") (newline)
 
 (define (load-pre-process-run filename)
   (let ((fi (open-input-file filename)))

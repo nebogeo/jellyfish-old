@@ -13,6 +13,8 @@
 ;; You should have received a copy of the GNU Affero General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+(display "starwisp.scm")(newline)
+
 (define instructions (list "nop" "jmp" "jmz" "jlt" "jgt" "ldl" "lda" "ldi" "sta"
                            "sti" "add" "sub" "mul" "div" "abs" "sin" "atn" "dot"
                            "crs" "sqr" "len" "dup" "drp" "cmp" "shf" "bld" "ret"
@@ -77,40 +79,38 @@
 
     (list
      (nomadic (make-id "b2x") (layout 1024 524 1 'left 0) 
-              (lambda () 
-  (display "hello from nomadic callback")(newline)
+              (lambda ()
+                (display "hello from nomadic callback")(newline)
+                (clear)
+  (hint-unlit)
 
   (with-state
    (hint-unlit)
    (set! jelly (build-jellyfish 512)))
-
   (with-primitive
    jelly
-   (line-width 5)
-   (pdata-map! (lambda (c) (vector 0.8 1 0.2)) "c")
+   (terrain-setup)
+   (jelly-compiled (compile-program 10000 prim-triangles 1 terrain)))
 
-   (pdata-index-map! 
-    (lambda (i p) 
-      (if (< i 20) 
-          (vmul (vector (crndf) (crndf) 0) 1) p)) "p")
+  (with-state
+   (hint-unlit)
+   (set! jelly2 (build-jellyfish 512)))
+  (with-primitive
+   jelly2
+   (particles-setup)
+   (jelly-compiled (compile-program 10000 prim-triangles 1 terrain)))
 
-   (jelly-prog explode))
-
-                ))
-     (scroll-view
-      (make-id "scroller")
-      (layout 'wrap-content 'wrap-content 1 'left 0)
-      (list
-       (linear-layout
-        (make-id "livecode")
-        'horizontal
-        (layout 2000 1000 1 'left 0) (list 255 255 255 255)
-        (list
-         (button (make-id "update") "Update" 20 fillwrap (lambda () 
-                                                           ;;(update-livecode jelly)
-                                                           (list))))
-        )))
+  (every-frame
+   (begin
+     (with-primitive 
+      jelly 0
+      (pdata-set! "x" reg-fling (vector (vx _fling) (vy _fling) 0)))
+     (with-primitive 
+      jelly2 0
+      (pdata-set! "x" reg-fling (vector (vx _fling) (vy _fling) 0)))
      ))
+   
+     ))))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg) '())

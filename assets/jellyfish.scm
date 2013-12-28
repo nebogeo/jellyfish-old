@@ -1,5 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(display "jellyfish.scm")(newline)
+
 (define nop 0) (define jmp 1) (define jmz 2) (define jlt 3) (define jgt 4)
 (define ldl 5) (define lda 6) (define ldi 7) (define sta 8) (define sti 9)
 (define add 10) (define sub 11) (define mul 12) (define div 13) (define abs 14)
@@ -274,87 +276,207 @@
    jmp 8 0          
    end-check))
 
+(define flock
+  '(let ((vertex 512) 
+         (accum-vertex 512)  
+         (closest 9999)
+         (closest-dist 9999)
+         (diff 0)
+         (vel 1024))
+     (loop 1 ;; infinite loop
+       (loop (< vertex 532) ;; for every vertex
+           
+         ;; accumulate over every vertex
+         (loop (< accum-vertex 532) 
+           (cond 
+            ;; if they're not the same vert
+            ((not (eq? accum-vertex vertex))
+             ;; get vector between the points
+             (set! diff (- (read vertex) (read accum-vertex)))
+             (cond 
+              ;; if it's closer so far
+              ((< (mag diff) closest-dist)
+               ;; record vector and distance
+               (set! closest diff)
+               (set! closest-dist (mag closest))))))
+           (set! accum-vertex (+ accum-vertex 1)))
+         ;; reset accum-vertex for next time
+         (set! accum-vertex 512)
+         
+         ;; calculate velocity as blend with previous
+         (write! vel (+ (* (read vel) 0.99)
+                        ;; attract to centre
+                        (* (+ (* (- (read vertex) (vector 0 0 0)) 0.05)
+                              ;; repel from closest vertex
+                              (* (normalise closest) -0.15)) 0.01)))
+         ;; add velocity to vertex position
+         (write! vertex (+ (read vel) (read vertex))) 
+         
+         ;; reset and increment stuff
+         (set! closest-dist 9999)
+         (set! vel (+ vel 1))
+         (set! vertex (+ vertex 1)))
+       ;; reset for main loop
+       (set! vertex 512)
+       (set! vel 1024))
+     ))
+
+(define (terrain-setup)
+  (pdata-map! (lambda (t) (rndvec)) "t")
+  (pdata-map! (lambda (n) (vmul (vector (crndf) (crndf) 0) 0.001)) "n")
+  (pdata-index-map! (lambda (i c) (vector (/ i 500) (/ i 200) (/ (modulo i 4) 0.25))) "c")
+
+  (translate (vector -1 2 0))
+  (rotate (vector -45 0 0))
+;  (rotate (vector 0 0 100))
+  (scale (vector 2 2 2))
+  
+  (let ((tsize 1)
+        (twidth 8))
+    (pdata-index-map! 
+     (lambda (i p) 
+       (let* ((tpos (modulo i 3))
+              (tri (quotient i 3))
+              (flip (modulo tri 2))
+              (quad (quotient tri 2))
+              (col (modulo quad twidth))
+              (row (quotient quad twidth)))
+         (vadd
+          (vector (+ (* row tsize) 10) (* col tsize) 0)
+          (if (zero? flip)
+              (cond 
+               ((eqv? tpos 0) (vector 0 0 0))
+               ((eqv? tpos 1) (vector tsize 0 0))
+               ((eqv? tpos 2) (vector tsize tsize 0)))
+              (cond 
+               ((eqv? tpos 0) (vector 0 0 0))
+               ((eqv? tpos 1) (vector tsize tsize 0))
+               ((eqv? tpos 2) (vector 0 tsize 0)))))))
+     "p")))
+
+(define (particles-setup)
+  (pdata-map! (lambda (t) (rndvec)) "t")
+  (pdata-index-map! (lambda (i c) (vector (/ i 500) (/ i 200) 0.5)) "c")
+  (pdata-map! (lambda (n) (vmul (vector (crndf) (crndf) 0) 0.001)) "n")
+  
+;;  (translate (vector 1.5 5 -5))
+  (rotate (vector -45 0 0))
+;;  (rotate (vector 0 0 100))
+;;  (scale (vector 2 2 2))
+  
+  (let ((pos (vector 0 0 0)))
+    (pdata-index-map! 
+     (lambda (i p) 
+       (when (zero? (modulo i 3))
+             (set! pos (vmul (vsub (rndvec) (vector -5 -1 -1)) 3)))
+       (vadd pos (vmul (srndvec) 0.1)))
+     "p")))
+
+
+(define terrain
+  '(let ((vertex positions-start)
+         (flingdamp (vector -30 -50 0))
+         (world (vector 0 0 0)))
+
+     (define recycle 
+       (lambda (dir)
+         (write! vertex (+ (read vertex) dir))
+         (write! (+ vertex 1) (+ (read (+ vertex 1)) dir))
+         (write! (+ vertex 2) (+ (read (+ vertex 2)) dir))
+         
+         (write! (+ vertex 1024) (noise (* (+ (read vertex) world) 0.2)))
+         (write! (+ vertex 1025) (noise (* (+ (read (+ vertex 1)) world) 0.2)))
+         (write! (+ vertex 1026) (noise (* (+ (read (+ vertex 2)) world) 0.2)))
+         0))
+
+     (loop 1
+       (set! flingdamp (+ (* flingdamp 0.99)
+                          (*v 
+                           (swizzle xyz (read reg-fling))
+                           (vector 0.01 -0.01 1))))
+
+       (define vel (* flingdamp 0.002))
+       (set! world (+ world vel))
+
+       (loop (< vertex positions-end)         
+         (write! vertex (+ (read vertex) vel))
+         (write! (+ vertex 1) (+ (read (+ vertex 1)) vel))
+         (write! (+ vertex 2) (+ (read (+ vertex 2)) vel))
+
+         (cond
+          ((> (read vertex) 5)
+           (ignore (recycle (vector -10 0 0)))))
+
+         (cond
+          ((< (read vertex) -5)
+           (ignore (recycle (vector 10 0 0)))))
+
+         (cond
+          ((> (swizzle yzz (read vertex)) 4)
+           (ignore (recycle (vector 0 -8 0)))))
+
+         (cond
+          ((< (swizzle yzz (read vertex)) -4)
+           (ignore (recycle (vector 0 8 0)))))
+
+         (set! vertex (+ vertex 3)))
+
+       (set! vertex positions-start))))
+
+(define testfn
+  '(let ((bb 9))
+     (define myfun 
+       (lambda (a b)
+         (trace 9) 
+         (* a b)))
+     (trace 0)
+     (trace (myfun 30 200))
+     (trace 1)
+
+     (loop 1)))
+
 
 (define jelly 0)
+(define jelly2 0)
 
 (display "inside jf")(newline)
 
-(define (jelly-setup)
+(define (jelly-setup2)
   (display "hello from nomadic callback")(newline)
+  (hint-unlit)
+
   (with-state
    (hint-unlit)
    (set! jelly (build-jellyfish 512)))
-
- ; '(let ((vertex 512) (src 0) (pull 0))
- ;    (loop (< vertex 1024)
- ;          (set! src (+ vertex 1))
- ;          (set! pull (* (- (read vertex) (read src)) 0.01))
- ;          (set! pull (+ pull (* (rndvec) 0.01)))
- ;          (write! vertex (+ (read vertex) pull))
- ;          (set! vertex (+ vertex 1)))
-     
-
   (with-primitive
    jelly
-   (line-width 5)
+   (terrain-setup)
+   (let ((p (compile-program 10000 prim-triangles 1 terrain)))
+     ;;(disassemble p)
+     (jelly-compiled p)
+     ))
 
-   (pdata-map! (lambda (c) (vector 0.8 1 0.2)) "c")
-   (pdata-index-map! (lambda (i p) (if (< i 20) (vector (* i -1.1) 0 0) p)) "p")
-   (pdata-map! (lambda (n) (vmul (vector (crndf) (crndf) 0) 0.001)) "n")
-   ;(jelly-prog explode)
+  (with-state
+   (hint-unlit)
+   (set! jelly2 (build-jellyfish 512)))
+  (with-primitive
+   jelly2
+   (particles-setup)
+   ;(let ((p (compile-program 10000 prim-triangles 1 terrain)))
+   ;  (jelly-compiled p)
+   ;  )
+   0)
+
+  (every-frame
+   (begin
+     (with-primitive 
+      jelly 0
+      (pdata-set! "x" reg-fling (vector (vx _fling) (vy _fling) 0)))
+     (with-primitive 
+      jelly2 0
+      (pdata-set! "x" reg-fling (vector (vx _fling) (vy _fling) 0)))
+     ))
    
-   (let ((p (compile-program 
-             30000 prim-points
-             '(let ((vertex 512) 
-                    (accum-vertex 512)  
-                    (closest 9999)
-                    (closest-dist 9999)
-                    (diff 0)
-                    (vel 1024))
-                (loop 1 ;; infinite loop
-                 (loop (< vertex 532) ;; for every vertex
-
-                  ;; accumulate over every vertex
-                  (loop (< accum-vertex 532) 
-                   (cond 
-                    ;; if they're not the same vert
-                    ((not (eq? accum-vertex vertex))
-                     ;; get vector between the points
-                     (set! diff (- (read vertex) (read accum-vertex)))
-                     (cond 
-                      ;; if it's closer so far
-                      ((< (mag diff) closest-dist)
-                       ;; record vector and distance
-                       (set! closest diff)
-                       (set! closest-dist (mag closest))))))
-                   (set! accum-vertex (+ accum-vertex 1)))
-                  ;; reset accum-vertex for next time
-                  (set! accum-vertex 512)
-
-                  ;; calculate velocity as blend with previous
-                  (write! vel (+ (* (read vel) 0.99)
-                                 ;; attract to centre
-                                 (* (+ (* (- (read vertex) (vector 0 0 0)) 0.05)
-                                       ;; repel from closest vertex
-                                       (* (normalise closest) -0.15)) 0.01)))
-                  ;; add velocity to vertex position
-                  (write! vertex (+ (read vel) (read vertex))) 
-                 
-                  ;; reset and increment stuff
-                  (set! closest-dist 9999)
-                  (set! vel (+ vel 1))
-                  (set! vertex (+ vertex 1)))
-                 ;; reset for main loop
-                 (set! vertex 512)
-                 (set! vel 1024))
-                ))))
-     (disassemble p)
-     (jelly-compiled p))
-   
-   )
-  
   )
 
-(define aaa 99)
-
-(jelly-setup)
+(jelly-setup2)
