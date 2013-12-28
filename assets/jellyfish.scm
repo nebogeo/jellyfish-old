@@ -324,7 +324,7 @@
 (define (terrain-setup)
   (pdata-map! (lambda (t) (rndvec)) "t")
   (pdata-map! (lambda (n) (vmul (vector (crndf) (crndf) 0) 0.001)) "n")
-  (pdata-index-map! (lambda (i c) (vector (/ i 500) (/ i 200) (/ (modulo i 4) 0.25))) "c")
+  (pdata-map! (lambda (c) (vector 1 1 1)) "c")
 
   (translate (vector -1 2 0))
   (rotate (vector -45 0 0))
@@ -343,15 +343,17 @@
               (row (quotient quad twidth)))
          (vadd
           (vector (+ (* row tsize) 10) (* col tsize) 0)
-          (if (zero? flip)
-              (cond 
-               ((eqv? tpos 0) (vector 0 0 0))
-               ((eqv? tpos 1) (vector tsize 0 0))
-               ((eqv? tpos 2) (vector tsize tsize 0)))
-              (cond 
-               ((eqv? tpos 0) (vector 0 0 0))
-               ((eqv? tpos 1) (vector tsize tsize 0))
-               ((eqv? tpos 2) (vector 0 tsize 0)))))))
+          (vmul
+           (if (zero? flip)
+               (cond 
+                ((eqv? tpos 0) (vector 0 0 0))
+                ((eqv? tpos 1) (vector tsize 0 0))
+                ((eqv? tpos 2) (vector tsize tsize 0)))
+               (cond 
+                ((eqv? tpos 0) (vector 0 0 0))
+                ((eqv? tpos 1) (vector tsize tsize 0))
+                ((eqv? tpos 2) (vector 0 tsize 0))))
+           1))))
      "p")))
 
 (define (particles-setup)
@@ -379,14 +381,32 @@
          (world (vector 0 0 0)))
 
      (define recycle 
-       (lambda (dir)
-         (write! vertex (+ (read vertex) dir))
-         (write! (+ vertex 1) (+ (read (+ vertex 1)) dir))
-         (write! (+ vertex 2) (+ (read (+ vertex 2)) dir))
-         
-         (write! (+ vertex 1024) (noise (* (+ (read vertex) world) 0.2)))
-         (write! (+ vertex 1025) (noise (* (+ (read (+ vertex 1)) world) 0.2)))
-         (write! (+ vertex 1026) (noise (* (+ (read (+ vertex 2)) world) 0.2)))
+       (lambda (dir)         
+         (write! vertex (+ (*v (read vertex) (vector 1 1 0)) dir))
+         (write! (+ vertex 1) (+ (*v (read (+ vertex 1)) (vector 1 1 0)) dir))
+         (write! (+ vertex 2) (+ (*v (read (+ vertex 2)) (vector 1 1 0)) dir))
+
+         (let ((a (noise (* (- (read vertex) world) 0.3)))
+               (b (noise (* (- (read (+ vertex 1)) world) 0.3)))
+               (c (noise (* (- (read (+ vertex 2)) world) 0.3))))
+
+           (write! vertex (+ (read vertex) (+ (*v a (vector 0 0 8)) (vector 0 0 -4))))
+           (write! (+ vertex 1) (+ (read (+ vertex 1)) (+ (*v b (vector 0 0 8)) (vector 0 0 -4))))
+           (write! (+ vertex 2) (+ (read (+ vertex 2)) (+ (*v c (vector 0 0 8)) (vector 0 0 -4))))
+
+           (define n (normalise (cross (- (read vertex)
+                                          (read (+ vertex 2)))
+                                       (- (read vertex)
+                                          (read (+ vertex 1))))))
+
+           (write! (+ vertex 512) n)
+           (write! (+ vertex 513) n)
+           (write! (+ vertex 514) n)
+           
+;           (write! (+ vertex 1024) a)
+;           (write! (+ vertex 1025) b)
+;           (write! (+ vertex 1026) c)
+           )
          0))
 
      (loop 1
@@ -399,6 +419,7 @@
        (set! world (+ world vel))
 
        (loop (< vertex positions-end)         
+
          (write! vertex (+ (read vertex) vel))
          (write! (+ vertex 1) (+ (read (+ vertex 1)) vel))
          (write! (+ vertex 2) (+ (read (+ vertex 2)) vel))
@@ -418,6 +439,7 @@
          (cond
           ((< (swizzle yzz (read vertex)) -4)
            (ignore (recycle (vector 0 8 0)))))
+
 
          (set! vertex (+ vertex 3)))
 

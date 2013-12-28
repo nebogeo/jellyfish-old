@@ -82,23 +82,23 @@
               (lambda ()
                 (display "hello from nomadic callback")(newline)
                 (clear)
-  (hint-unlit)
+ ; (hint-unlit)
 
   (with-state
-   (hint-unlit)
+;   (hint-unlit)
    (set! jelly (build-jellyfish 512)))
   (with-primitive
    jelly
    (terrain-setup)
    (jelly-compiled (compile-program 10000 prim-triangles 1 terrain)))
 
-  (with-state
-   (hint-unlit)
-   (set! jelly2 (build-jellyfish 512)))
-  (with-primitive
-   jelly2
-   (particles-setup)
-   (jelly-compiled (compile-program 10000 prim-triangles 1 terrain)))
+;  (with-state
+;   (hint-unlit)
+;   (set! jelly2 (build-jellyfish 512)))
+;  (with-primitive
+;   jelly2
+;   (particles-setup)
+;   (jelly-compiled (compile-program 10000 prim-triangles 1 terrain)))
 
   (every-frame
    (begin
