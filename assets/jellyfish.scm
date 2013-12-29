@@ -407,7 +407,7 @@
 ;           (write! (+ vertex 1025) b)
 ;           (write! (+ vertex 1026) c)
            )
-         0))
+         ))
 
      (loop 1
        (set! flingdamp (+ (* flingdamp 0.99)
@@ -426,19 +426,19 @@
 
          (cond
           ((> (read vertex) 5)
-           (ignore (recycle (vector -10 0 0)))))
+           (recycle (vector -10 0 0))))
 
          (cond
           ((< (read vertex) -5)
-           (ignore (recycle (vector 10 0 0)))))
+           (recycle (vector 10 0 0))))
 
          (cond
           ((> (swizzle yzz (read vertex)) 4)
-           (ignore (recycle (vector 0 -8 0)))))
+           (recycle (vector 0 -8 0))))
 
          (cond
           ((< (swizzle yzz (read vertex)) -4)
-           (ignore (recycle (vector 0 8 0)))))
+           (recycle (vector 0 8 0))))
 
 
          (set! vertex (+ vertex 3)))

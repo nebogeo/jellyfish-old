@@ -115,8 +115,13 @@
   (cond 
     ((null? l) '())
     (else 
-     (append (emit-expr (car l)) 
-             (emit-expr-list (cdr l))))))
+     (append (emit-expr (car l))
+             (if (null? (cdr l)) '()
+                 (append
+                  ;; insert drops to ignore returned data
+                  ;; from expressions with side effects
+                  (emit (vector drp 0 0)) 
+                  (emit-expr-list (cdr l))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; primitive function calls follow
@@ -125,13 +130,15 @@
   (append
    (emit-expr (caddr x))
    (emit 
-    (vector sta (variable-address (cadr x)) 0))))
+    (vector sta (variable-address (cadr x)) 0))
+   (emit (vector ldl 0 0))))
 
 (define (emit-write! x)
   (append
    (emit-expr (caddr x)) ;; data
    (emit-expr (cadr x)) ;; address
-   (emit (vector sts 0 0))))
+   (emit (vector sts 0 0))
+   (emit (vector ldl 0 0))))
 
 (define (emit-read x)
   (append
@@ -190,7 +197,8 @@
   (make-variable! (cadr x))
   (append
    (emit-expr (caddr x))
-   (emit (vector sta (variable-address (cadr x)) 0))))
+   (emit (vector sta (variable-address (cadr x)) 0))
+   (emit (vector ldl 0 0))))
 
 (define (emit-let-part x)
   (make-variable! (car x))
@@ -211,7 +219,8 @@
 (define (emit-trace x)
   (append
    (emit-expr (cadr x))
-   (emit (vector _dbg 0 0))))
+   (emit (vector _dbg 0 0))
+   (emit (vector ldl 0 0))))
 
 (define (emit-not x)
   (append
@@ -237,6 +246,11 @@
   (append
    (emit-expr (cadr x))
    (emit-expr (caddr x))
+   (emit (vector proc 0 0))))
+
+(define (unary-procedure proc x) 
+  (append
+   (emit-expr (cadr x))
    (emit (vector proc 0 0))))
 
 (define (emit-eq? x)
@@ -321,36 +335,20 @@
     ((eq? (car x) 'trace) (emit-trace x))
     ((eq? (car x) 'read) (emit-read x))
     ((eq? (car x) 'not) (emit-not x))
-    ((eq? (car x) 'add1)
+    ((eq? (car x) 'mag) (unary-procedure len x))
+    ((eq? (car x) 'magsq) (unary-procedure lensq x))
+    ((eq? (car x) 'noise) (unary-procedure noise x))
+    ((eq? (car x) 'normalise) (unary-procedure nrm x))
+    ((eq? (car x) '++)
      (append
       (emit-expr (cadr x))
       (emit-push (vector 1 0 0))
       (emit (vector add 0 0))))
-    ((eq? (car x) 'sub1)
+    ((eq? (car x) '--)
      (append
       (emit-expr (cadr x))
       (emit-push (vector 1 0 0))
       (emit (vector sub 0 0))))
-    ((eq? (car x) 'mag)
-     (append
-      (emit-expr (cadr x))
-      (emit (vector len 0 0))))
-    ((eq? (car x) 'magsq)
-     (append
-      (emit-expr (cadr x))
-      (emit (vector lensq 0 0))))
-    ((eq? (car x) 'noise)
-     (append
-      (emit-expr (cadr x))
-      (emit (vector noise 0 0))))
-    ((eq? (car x) 'normalise)
-     (append
-      (emit-expr (cadr x))
-      (emit (vector nrm 0 0))))
-    ((eq? (car x) 'ignore)
-     (append
-      (emit-expr (cadr x))
-      (emit (vector drp 0 0))))
     (else 
      (let ((addr (variable-address (car x))))
        (if addr
