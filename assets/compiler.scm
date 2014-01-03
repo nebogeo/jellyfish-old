@@ -12,13 +12,15 @@
 (define add.x 29) (define add.y 30) (define add.z 31) (define end-check 999)
 (define swp 32) (define rnd 33) (define mull 34) (define jmr 35) (define ldlv 36)
 (define lensq 37) (define noise 38) (define lds 39) (define sts 40) (define mulv 41)
+(define synth-crt 42) (define synth-con 43) (define synth-ply 44)
 
 (define instr 
   '(nop jmp jmz jlt jgt ldl lda ldi sta sti
         add sub mul div abs _sin atn dot crs 
         sqr len dup drp cmp shf bld ret dbg 
         nrm add.x add.y add.z swp rnd mull
-        jmr ldlv lensq noise lds sts mulv))
+        jmr ldlv lensq noise lds sts mulv
+        synth-crt synth-con synth-ply))
 
 (define prim-triangles 0)
 (define prim-tristrip 1)
@@ -119,7 +121,8 @@
              (if (null? (cdr l)) '()
                  (append
                   ;; insert drops to ignore returned data
-                  ;; from expressions with side effects
+                  ;; from expressions in the list we're not
+                  ;; using (must have side effects)
                   (emit (vector drp 0 0)) 
                   (emit-expr-list (cdr l))))))))
 
@@ -281,6 +284,25 @@
    (emit (vector jmr 2 0))
    (emit (vector ldl 0 0))))
 
+(define (emit-synth-create x)
+  (append
+   (emit-expr (cadr x)) ;; id, type, value
+   (emit (vector synth-crt 0 0))
+   (emit (vector ldl 0 0))))
+
+(define (emit-synth-connect x)
+  (append
+   (emit-expr (cadr x)) ;; from, arg, to
+   (emit (vector synth-con 0 0))
+   (emit (vector ldl 0 0))))
+
+(define (emit-synth-play x)
+  (append
+   (emit-expr (cadr x)) ;; time, id, pan
+   (emit (vector synth-ply 0 0))
+   (emit (vector ldl 0 0))))
+
+
 (define (emit-swizzle x)
   (append
    (emit-expr (caddr x))
@@ -349,6 +371,9 @@
       (emit-expr (cadr x))
       (emit-push (vector 1 0 0))
       (emit (vector sub 0 0))))
+    ((eq? (car x) 'synth-create) (emit-synth-create x))
+    ((eq? (car x) 'synth-connect) (emit-synth-connect x))
+    ((eq? (car x) 'synth-play) (emit-synth-play x))
     (else 
      (let ((addr (variable-address (car x))))
        (if addr
@@ -369,6 +394,7 @@
       ((eq? (car x) 'define) (emit-define x))
       ((eq? (car x) 'cond) (emit-cond x))
       ((eq? (car x) 'loop) (emit-loop x))
+      ((eq? (car x) 'do) (emit-expr-list (cdr x)))
       (else (emit-procedure x)))
      (if debug
          (list (string-append "ending " (symbol->string (car x))))
@@ -415,9 +441,71 @@
     (cons
      (car code) 
      (link-program (cdr code) function-start (+ pc 1))))))
-           
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define aid 0)
+(define (new-aid) (set! aid (+ aid 1)) aid)
+
+(define synth-ops 
+  '(sine saw tri squ white pink adsr add sub mul div pow
+         mooglp moogbp mooghp formant crush distort clip
+         delay ks xfade samplenhold tracknhold))
+
+(define (get-opn op)
+  (define (_ l n)
+    (cond
+     ((null? l) #f)
+     ((eq? (car l) op) n)
+     (else (_ (cdr l) (+ n 1)))))
+  (_ synth-ops 1))
+
+(define (synth-operator parent argn x)
+  (let ((id (new-aid))) ;; compile time ids bad
+    (cond
+     ((number? x)
+      (append
+       (list (list 'synth-create (list 'vector id 0 x)))
+       (list (list 'synth-connect (list 'vector parent argn id)))))
+     (else  
+      (let ((argc -1))
+        (append
+         (list (list 'synth-create (list 'vector id (get-opn (car x)) 0)))
+         (if (zero? parent) 
+             '() 
+             (list (list 'synth-connect (list 'vector parent argn id))))
+         (foldl
+          (lambda (c r) 
+            (set! argc (+ argc 1))
+            (append
+             (synth-operator id argc c)
+             r))
+          '()
+          (cdr x))))))))
+
+
+;; basically diy-macro from the main tinyscheme stuff           
+(define (pre-process s)
+  (cond
+    ((null? s) s)
+    ((list? s)
+     (map
+      (lambda (i)
+        (if (and (list? i) (not (null? i)))
+            ;; dispatch to macro processors
+            (cond
+             ((eq? (car i) 'play-now) 
+              (dbg (append
+               (list 'do)
+               (synth-operator 0 0 (cadr i))
+               (list '(synth-play (vector 0 1 0))))))
+             (else (pre-process i)))
+            (pre-process i)))
+      s))
+    (else s)))
+
 (define (compile-program cycles prim hints x)
-  (let* ((code (emit-expr x))
+  (let* ((code (emit-expr (pre-process x)))
          (data (variables->data))
          (function-start (+ 4 (length data)))
          (out 
@@ -430,8 +518,9 @@
             function-code
             code)
            function-start 0)))
-    ;(msg "code is as follows") 
-    ;(disassemble out)
+    ;;(msg "code is as follows") 
+    (disassemble out)
+    (msg (length out))
     out))
 
 (define (disassemble code)

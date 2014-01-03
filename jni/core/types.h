@@ -32,6 +32,11 @@ typedef float f32;
 typedef Fixed x32;
 #endif
 
+// get namespace bb everywhere, for differentiating from
+// std::list where both are needed :/
+#include "list.h"
+using namespace bb;
+
 #ifdef FLX_LINUX
 //-Linux--------------------------------
 #define flx_real x32

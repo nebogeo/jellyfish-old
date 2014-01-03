@@ -20,6 +20,8 @@
 #include "../engine/scenenode.h"
 #include "../core/msg.h"
 
+#include "jellyfish/jellyfish.h"
+
 jellyfish_primitive::jellyfish_primitive(u32 size):
     primitive(size, TRIANGLES)
 {

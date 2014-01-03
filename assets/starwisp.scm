@@ -90,7 +90,7 @@
   (with-primitive
    jelly
    (terrain-setup)
-   (jelly-compiled (compile-program 10000 prim-triangles 1 terrain)))
+   (jelly-compiled (compile-program 100 prim-triangles 1 synthtest)))
 
 ;  (with-state
 ;   (hint-unlit)
@@ -105,9 +105,9 @@
      (with-primitive 
       jelly 0
       (pdata-set! "x" reg-fling (vector (vx _fling) (vy _fling) 0)))
-     (with-primitive 
-      jelly2 0
-      (pdata-set! "x" reg-fling (vector (vx _fling) (vy _fling) 0)))
+     ;(with-primitive 
+     ; jelly2 0
+     ; (pdata-set! "x" reg-fling (vector (vx _fling) (vy _fling) 0)))
      ))
    
      ))))

@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include "../core/types.h"
 #include "../core/vec3.h"
+#include "../fluxa/Graph.h"
 
 // instruction set
 #define NOP 0
@@ -66,6 +67,9 @@
 #define LDS 39
 #define STS 40
 #define MULV 41
+#define SYNTH_CRT 42
+#define SYNTH_CON 43
+#define SYNTH_PLY 44
 
 // registers
 #define REG_CONTROL 0   // pc, cycles, stack
@@ -107,6 +111,7 @@ private:
 	vec3 *m_heap;
     u32 m_heap_size;
 	bool *m_instruction;
+    Graph *m_audio_graph;
 };
 
 #endif

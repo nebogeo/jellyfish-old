@@ -1,4 +1,4 @@
-// Copyright (C) 2011 Dave Griffiths
+// Copyright (C) 2003 David Griffiths <dave@pawfal.org>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -14,25 +14,27 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-#ifndef JFISH_PRIM
-#define JFISH_PRIM
-
-#include "engine/primitive.h"
-
-class jellyfish;
-
-class jellyfish_primitive : public primitive
+namespace spiralcore
 {
-public:
-    jellyfish_primitive(u32 size);
-    ~jellyfish_primitive();
 
-    virtual void build();
-    virtual void execute();
-    virtual void render(u32 hints);
+typedef signed long int64;
+typedef signed int int32;
+typedef signed short int16;
+typedef signed char int8;
 
-private:
-    jellyfish *m_machine;
-};
+typedef unsigned long uint64;
+typedef unsigned int uint32;
+typedef unsigned short uint16;
+typedef unsigned char uint8;
 
-#endif
+typedef float float32;
+typedef double float64;
+
+typedef uint32 SampleID;
+typedef uint32 EffectID;
+typedef uint32 EventID;
+typedef uint32 PatternID;
+
+typedef float32 AudioType;
+
+}

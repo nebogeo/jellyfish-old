@@ -16,6 +16,8 @@
 
 #include "list.h"
 
+using namespace bb;
+
 list::list() : m_head(NULL) 
 {
 }

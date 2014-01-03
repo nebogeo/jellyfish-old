@@ -23,7 +23,16 @@
 #include <android/log.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+
+#include <assert.h>
+#include <string.h>
+#include <pthread.h>
+
 #include "scheme/scheme.h"
+#include "audio.h"
+
+///////////////////////////
 
 int   gAppAlive   = 1;
 
@@ -143,4 +152,11 @@ Java_foam_jellyfish_Scheme_nativeLoadTexture(JNIEnv* env, jobject thiz, jstring 
 
     (*env)->ReleaseStringUTFChars(env, texname, filename);
     (*env)->ReleaseByteArrayElements(env,arr,data,JNI_ABORT);
+}
+
+// create the engine and output mix objects
+void Java_foam_jellyfish_Scheme_createEngine(JNIEnv* env, jclass clazz)
+{
+    audio_init();
+    create_audio_engine();
 }

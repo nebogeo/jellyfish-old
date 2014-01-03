@@ -17,6 +17,7 @@
 #include "engine.h"
 #include "text_primitive.h"
 #include "jellyfish/jellyfish_primitive.h"
+#include "fluxa/Graph.h"
 
 #ifdef _EE
 #include "ee/ps2-renderer.h"
@@ -49,27 +50,7 @@ engine::engine()
 {
     m_sg=new scenegraph();
     clear();
-
-    u32 w=256;
-    u32 h=256;
-    u8 *tex = new u8[w*h*4];
-    u32 p=0;
-    for (int y=0; y<w; y++)
-    {
-        for (int x=0; x<h; x++)
-        {
-            int cx=x-127;
-            int cy=y-127;
-            float c=sqrt(cx*cx+cy*cy)/20;
-            int cc=c;
-            tex[p++]=(cc*10)%255;
-            tex[p++]=(cc*23)%255;
-            tex[p++]=(cc*6)%255;
-            tex[p++]=255;
-        }
-    }
-
-    load_texture("test",w,h,tex);
+    m_audio_graph = new Graph(70,16000);
 }
 
 engine::~engine()
@@ -440,7 +421,7 @@ void engine::pdata_set(const char *name, int i, vec3 v)
     }
 }
 
-list *engine::geo_line_intersect(const vec3 &start, const vec3 &end)
+bb::list *engine::geo_line_intersect(const vec3 &start, const vec3 &end)
 {
     if (grabbed())
     {

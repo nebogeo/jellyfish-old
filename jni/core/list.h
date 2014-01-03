@@ -20,6 +20,8 @@
 #ifndef BB_LIST
 #define BB_LIST
 
+namespace bb {
+
 class list
 {
 public:
@@ -48,5 +50,7 @@ public:
 
     node* m_head;
 };
+
+}
 
 #endif

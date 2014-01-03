@@ -56,10 +56,11 @@ public class Scheme
         Log.i("starwisp","done.");
     }
 
-    public static void initGL() { synchronized (mLock) { nativeInitGL(); } }
+    public static void initGL() { synchronized (mLock) { nativeInitGL(); createEngine(); } }
     public static void resize(int w, int h) { synchronized (mLock) { nativeResize(w,h); } }
     public static void render() { synchronized (mLock) { nativeRender(); } }
     public static void loadTexture(String texname, byte[] arr, int w, int h) { synchronized (mLock) { nativeLoadTexture(texname,arr,w,h); } }
+    public static native void createEngine();
 
     public static String eval(String code) {
         synchronized (mLock)

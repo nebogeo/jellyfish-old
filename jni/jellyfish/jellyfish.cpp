@@ -15,16 +15,19 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include <stdio.h>
+#include "engine/engine.h"
 #include "jellyfish.h"
 #include <stdlib.h>
 #include "core/msg.h"
 #include "core/noise.h"
+
 
 jellyfish::jellyfish(vec3 *heap_ptr, u32 heap_size) :
     m_heap(heap_ptr),
     m_heap_size(heap_size)
 {
     m_instruction = new bool[m_heap_size];
+    m_audio_graph = engine::get()->get_audio_graph();
 
 	for (u32 n=0; n<m_heap_size; n++)
 	{
@@ -188,11 +191,11 @@ void jellyfish::run()
         vec3 shf=pop();
         vec3 src=pop();
         vec3 dst;
-        dst.x=(&src.x)[((int)fabs(shf.x))%3];
+        dst.x=(&src.x)[((int)fabs((float)shf.x))%3];
         if ((float)shf.x<0) dst.x=-dst.x;
-        dst.y=(&src.x)[((int)fabs(shf.y))%3];
+        dst.y=(&src.x)[((int)fabs((float)shf.y))%3];
         if ((float)shf.y<0) dst.y=-dst.y;
-        dst.z=(&src.x)[((int)fabs(shf.z))%3];
+        dst.z=(&src.x)[((int)fabs((float)shf.z))%3];
         if ((float)shf.z<0) dst.z=-dst.z;
         push(dst);
     } break;
@@ -239,6 +242,23 @@ void jellyfish::run()
         float n=Noise::noise(v.x,v.y,v.z);
         push(vec3(n,n,n));
     } break;
+
+ 	case SYNTH_CRT:
+    {
+        vec3 v=pop();        
+        m_audio_graph->Create((int)v.x, (Graph::Type)((int)v.y), v.z);
+    } break;
+ 	case SYNTH_CON:
+    {
+        vec3 v=pop();
+        m_audio_graph->Connect((int)v.x, (int)v.y, (int)v.z);
+    } break;
+ 	case SYNTH_PLY:
+    {
+        vec3 v=pop();
+        m_audio_graph->Play(v.x, (int)v.y, v.z);
+    } break;
+
     default: set_instr(pc,false);
    	};
 
