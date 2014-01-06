@@ -65,31 +65,11 @@ class NomadicSurfaceView extends GLSurfaceView {
         mRenderer = new NomadicRenderer(context, id);
         setRenderer(mRenderer);
     }
-
+    
     public boolean onTouchEvent(MotionEvent event) {
         mGestures.onTouchEvent(event);
         return true;
-
-/*
-        final int pointerCount = event.getPointerCount();
-        String code="(input-touches (list ";
-        for (int p = 0; p < pointerCount; p++) {
-            code+="(list "+event.getPointerId(p)+" "+event.getX(p)+" "+event.getY(p)+") ";
-        }
-        code+="))";
-
-        Log.i("starwisp","touch event...");
-
-        //mRenderer.eval(code);
-
-        if (event.getAction() == MotionEvent.ACTION_DOWN)
-        {
-
-        }
-        return false;
-*/
     }
-
 
     private class GestureListener 
         extends GestureDetector.SimpleOnGestureListener 

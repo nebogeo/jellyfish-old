@@ -144,11 +144,12 @@ Java_foam_jellyfish_Scheme_nativeLoadTexture(JNIEnv* env, jobject thiz, jstring 
     int len = (*env)->GetArrayLength(env, arr);
     const char *filename = (*env)->GetStringUTFChars(env, texname, 0);
 
+    __android_log_print(ANDROID_LOG_INFO, "starwisp", "loading texture");
+
+
     int id=appLoadTexture(filename,w,h,data);
 
-    char txt[1024];
-    sprintf(txt,"(display \"load tex loaded [%s] %d bytes\")(newline)",filename,len,id);
-    appEval(txt);
+    __android_log_print(ANDROID_LOG_INFO, "starwisp", "loaded texture");
 
     (*env)->ReleaseStringUTFChars(env, texname, filename);
     (*env)->ReleaseByteArrayElements(env,arr,data,JNI_ABORT);

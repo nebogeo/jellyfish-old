@@ -70,6 +70,7 @@
 #define SYNTH_CRT 42
 #define SYNTH_CON 43
 #define SYNTH_PLY 44
+#define FLR 45
 
 // registers
 #define REG_CONTROL 0   // pc, cycles, stack

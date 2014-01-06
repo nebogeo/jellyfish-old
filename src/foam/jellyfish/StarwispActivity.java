@@ -26,6 +26,9 @@ import android.view.ViewGroup;
 import android.view.View;
 import android.graphics.Typeface;
 
+import tv.ouya.console.api.OuyaController;
+import android.view.InputDevice;
+import android.view.MotionEvent;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -44,6 +47,7 @@ public class StarwispActivity extends FragmentActivity
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
+        OuyaController.init(this);
 
         String arg = "none";
         Bundle extras = getIntent().getExtras();
@@ -63,6 +67,42 @@ public class StarwispActivity extends FragmentActivity
             Log.e("starwisp", "Error parsing ["+json+"] " + e.toString());
         }
     }
+
+    @Override
+    public boolean onGenericMotionEvent(final MotionEvent event) {
+        //Get the player #
+        int player = OuyaController.getPlayerNumByDeviceId(event.getDeviceId());    
+
+        Log.i("starwisp","ogme");
+        
+        // Joystick
+        if((event.getSource() & InputDevice.SOURCE_CLASS_JOYSTICK) != 0) {
+            //Get all the axis for the event
+            float LS_X = event.getAxisValue(OuyaController.AXIS_LS_X);
+            float LS_Y = event.getAxisValue(OuyaController.AXIS_LS_Y);
+            
+            float RS_X = event.getAxisValue(OuyaController.AXIS_RS_X);
+            float RS_Y = event.getAxisValue(OuyaController.AXIS_RS_Y);
+            float L2 = event.getAxisValue(OuyaController.AXIS_L2);
+            float R2 = event.getAxisValue(OuyaController.AXIS_R2);
+            
+            Log.i("starwisp","controller "+LS_X+" "+LS_Y+
+                  RS_X+" "+RS_Y+
+                  L2+" "+R2);
+            
+            Scheme.eval("(on-fling "+LS_X*-500+" "+LS_Y*-500+")");   
+        }
+
+        //Touchpad
+        if((event.getSource() & InputDevice.SOURCE_CLASS_POINTER) != 0) {
+            //Print the pixel coordinates of the cursor
+            Log.i("starwisp", "Cursor X: " + event.getX() + "Cursor Y: " + event.getY());
+        }
+        
+        return true;
+    }
+
+
 
     @Override
     public void onStart()

@@ -73,44 +73,39 @@
 (define-activity-list
   (activity
    "main"
-   (frame-layout
-    (make-id "fl")
-    (layout 'fill-parent 'fill-parent 1 'left 0)
+   (nomadic (make-id "b2x") (layout 'fill-parent 'fill-parent 1 'left 0) 
+            (lambda ()
+              (display "hello from nomadic callback")(newline)
+              (clear)
+                                        ; (hint-unlit)
 
-    (list
-     (nomadic (make-id "b2x") (layout 1024 524 1 'left 0) 
-              (lambda ()
-                (display "hello from nomadic callback")(newline)
-                (clear)
- ; (hint-unlit)
-
-  (with-state
-;   (hint-unlit)
-   (set! jelly (build-jellyfish 512)))
-  (with-primitive
-   jelly
-   (terrain-setup)
-   (jelly-compiled (compile-program 100 prim-triangles 1 synthtest)))
-
-;  (with-state
-;   (hint-unlit)
-;   (set! jelly2 (build-jellyfish 512)))
-;  (with-primitive
-;   jelly2
-;   (particles-setup)
-;   (jelly-compiled (compile-program 10000 prim-triangles 1 terrain)))
-
-  (every-frame
-   (begin
-     (with-primitive 
-      jelly 0
-      (pdata-set! "x" reg-fling (vector (vx _fling) (vy _fling) 0)))
-     ;(with-primitive 
-     ; jelly2 0
-     ; (pdata-set! "x" reg-fling (vector (vx _fling) (vy _fling) 0)))
-     ))
-   
-     ))))
+              (with-state
+                                        ;   (hint-unlit)
+               (set! jelly (build-jellyfish 512)))
+              (with-primitive
+               jelly
+               (terrain-setup)
+               (jelly-compiled (compile-program 10000 prim-triangles 1 terrain)))
+              
+                                        ;  (with-state
+                                        ;   (hint-unlit)
+                                        ;   (set! jelly2 (build-jellyfish 512)))
+                                        ;  (with-primitive
+                                        ;   jelly2
+                                        ;   (particles-setup)
+                                        ;   (jelly-compiled (compile-program 10000 prim-triangles 1 terrain)))
+              
+              (every-frame
+               (begin
+                 (with-primitive 
+                  jelly 0
+                  (pdata-set! "x" reg-fling (vector (vx _fling) (vy _fling) 0)))
+                                        ;(with-primitive 
+                                        ; jelly2 0
+                                        ; (pdata-set! "x" reg-fling (vector (vx _fling) (vy _fling) 0)))
+                 ))
+              
+              ))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg) '())

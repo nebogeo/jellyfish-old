@@ -12,7 +12,7 @@
 (define add.x 29) (define add.y 30) (define add.z 31) (define end-check 999)
 (define swp 32) (define rnd 33) (define mull 34) (define jmr 35) (define ldlv 36)
 (define lensq 37) (define noise 38) (define lds 39) (define sts 40) (define mulv 41)
-(define synth-crt 42) (define synth-con 43) (define synth-ply 44)
+(define synth-crt 42) (define synth-con 43) (define synth-ply 44) (define flr 45)
 
 (define instr 
   '(nop jmp jmz jlt jgt ldl lda ldi sta sti
@@ -20,7 +20,7 @@
         sqr len dup drp cmp shf bld ret dbg 
         nrm add.x add.y add.z swp rnd mull
         jmr ldlv lensq noise lds sts mulv
-        synth-crt synth-con synth-ply))
+        synth-crt synth-con synth-ply flr))
 
 (define prim-triangles 0)
 (define prim-tristrip 1)
@@ -64,15 +64,15 @@
 (define (get-segment name)
   (cond
    ((eq? name 'code-start) (memseg 0))
-   ((eq? name 'code-end) (memseg 1))
+   ((eq? name 'code-end) (- (memseg 1) 1))
    ((eq? name 'positions-start) (memseg 1))
-   ((eq? name 'positions-end) (memseg 2))
+   ((eq? name 'positions-end) (- (memseg 2) 20))
    ((eq? name 'normals-start) (memseg 2))
-   ((eq? name 'normals-end) (memseg 3))
+   ((eq? name 'normals-end) (- (memseg 3) 1))
    ((eq? name 'colours-start) (memseg 3))
-   ((eq? name 'colours-end) (memseg 4))
+   ((eq? name 'colours-end) (- (memseg 4) 1))
    ((eq? name 'texture-start) (memseg 4))
-   ((eq? name 'texture-end) (memseg 5))
+   ((eq? name 'texture-end) (- (memseg 5) 1))
    (else #f)))
 
 ;; when we find a symbol, look it up
@@ -361,6 +361,15 @@
     ((eq? (car x) 'magsq) (unary-procedure lensq x))
     ((eq? (car x) 'noise) (unary-procedure noise x))
     ((eq? (car x) 'normalise) (unary-procedure nrm x))
+    ((eq? (car x) 'abs) (unary-procedure abs x))
+    ((eq? (car x) 'floor) (unary-procedure flr x))
+    ((eq? (car x) 'round) 
+     (append
+      (emit-expr (cadr x))
+      (emit (vector ldlv 0 0))
+      (emit (vector 0.5 0.5 0.5))
+      (emit (vector add 0 0))
+      (emit (vector flr 0 0))))
     ((eq? (car x) '++)
      (append
       (emit-expr (cadr x))
@@ -519,8 +528,8 @@
             code)
            function-start 0)))
     ;;(msg "code is as follows") 
-    (disassemble out)
-    (msg (length out))
+    ;;(disassemble out)
+    (msg "length is" (length out))
     out))
 
 (define (disassemble code)

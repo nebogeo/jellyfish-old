@@ -22,6 +22,12 @@ import java.io.InputStreamReader;
 import android.app.Activity;
 import android.util.Log;
 import android.content.Context;
+import android.graphics.BitmapFactory;
+import android.graphics.Bitmap;
+import java.io.FileNotFoundException;
+import java.nio.ByteBuffer;
+import java.io.InputStream;
+
 
 public class Scheme
 {
@@ -36,11 +42,15 @@ public class Scheme
     private static native void nativeRender();
     private static native void nativeLoadTexture(String texname, byte[] arr, int w, int h);
 
+    static Activity m_Act;
+    static FlxImage ret;
+
     static {
         System.loadLibrary("starwisp-core");
     }
 
     public Scheme(Activity ctx) {
+        m_Act = ctx;
         Log.i("starwisp","starting up...");
         nativeInit();
         Log.i("starwisp","started, now running init.scm...");
@@ -54,12 +64,71 @@ public class Scheme
         Log.i("starwisp","running compiler.scm...");
         eval(readRawTextFile(ctx, "compiler.scm"));
         Log.i("starwisp","done.");
+
+        ret = new FlxImage();
     }
 
-    public static void initGL() { synchronized (mLock) { nativeInitGL(); createEngine(); } }
+    public static void initGL() {
+        synchronized (mLock) { 
+            nativeInitGL(); 
+            createEngine();
+
+            Log.i("starwisp","loading textures");
+            loadTexture("stripes.png");
+            Log.i("starwisp","done.");
+        } 
+    }
+
     public static void resize(int w, int h) { synchronized (mLock) { nativeResize(w,h); } }
     public static void render() { synchronized (mLock) { nativeRender(); } }
-    public static void loadTexture(String texname, byte[] arr, int w, int h) { synchronized (mLock) { nativeLoadTexture(texname,arr,w,h); } }
+
+    public class FlxImage
+    {
+        byte [] mData;
+        int mWidth;
+        int mHeight;
+    }
+
+    public static void loadTexture(String texname) {
+        FlxImage tex=readRawImage(m_Act,texname);
+        if (tex!=null)
+        {
+            synchronized (mLock)
+            {
+                Log.i("starwisp","calling native load texture");
+                nativeLoadTexture(texname,tex.mData,tex.mWidth,tex.mHeight);
+            }
+        }
+    }
+
+
+    public static FlxImage readRawImage(Context ctx, String fn)
+    {
+        InputStream fis = null;
+        try
+        {
+            fis = ctx.getAssets().open(fn);
+            Bitmap bmp = BitmapFactory.decodeStream(fis);
+            ByteBuffer bb = ByteBuffer.allocate(bmp.getWidth()*bmp.getHeight()*4);
+            bmp.copyPixelsToBuffer(bb);
+            ret.mWidth = bmp.getWidth();
+            ret.mHeight = bmp.getHeight();
+            ret.mData = bb.array();
+            Log.i("starwisp","loaded ok");
+            return ret;
+        }
+        catch(FileNotFoundException e)
+        {
+            Log.i("starwisp","fnf");
+        }
+        catch(IOException ioe)
+        {
+            Log.i("starwisp","ioe");
+        }
+        return null;
+    }
+
+
     public static native void createEngine();
 
     public static String eval(String code) {

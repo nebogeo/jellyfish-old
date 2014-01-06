@@ -75,18 +75,6 @@ class NomadicRenderer implements GLSurfaceView.Renderer {
         }
     }
 
-
-    public void loadTexture(String texname) {
-        FlxImage tex=readRawImage(mAct,texname);
-        if (tex!=null)
-        {
-            synchronized (mLock)
-            {
-                Scheme.loadTexture(texname,tex.mData,tex.mWidth,tex.mHeight);
-            }
-        }
-    }
-
     Context mAct;
 
     public FlxImage readRawImage(Context ctx, String fn)

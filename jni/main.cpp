@@ -447,8 +447,8 @@ int main(int argc, char *argv[])
     //tex=LoadPNG("material/textures/squib.png",w,h);
     //appLoadTexture("squib.png",w,h,(char *)tex);
 
-    unsigned char *tex=LoadPNG("../assets/14.png",w,h);
-    appLoadTexture("14.png",w,h,(char *)tex);
+    unsigned char *tex=LoadPNG("../assets/stripes.png",w,h);
+    appLoadTexture("stripes.png",w,h,(char *)tex);
 
 
 #ifdef FLX_RPI
