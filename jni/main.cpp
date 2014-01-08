@@ -380,9 +380,9 @@ static void init_ogl_rpi(RPI_STATE_T *state)
    assert(EGL_FALSE != result);
 
    // Set background color and clear buffers
-   //glClearColor(0.15f, 0.25f, 0.35f, 1.0f);
-   //glClear( GL_COLOR_BUFFER_BIT );
-   //glClear( GL_DEPTH_BUFFER_BIT );
+   glClearColor(0.f, 0.f, 0.f, 0.5f);
+   glClear( GL_COLOR_BUFFER_BIT );
+   glClear( GL_DEPTH_BUFFER_BIT );
    //glShadeModel(GL_FLAT);
 
    // Enable back face culling.
@@ -394,7 +394,7 @@ static void init_ogl_rpi(RPI_STATE_T *state)
 void repl_loop() {
     char cmd_str[80];
     do {
-        printf("\n-> ");
+        printf("fluxus> ");
         fgets( cmd_str, 80, stdin );
         pthread_mutex_lock(render_mutex);
         appEval(cmd_str);
