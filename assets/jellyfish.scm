@@ -64,7 +64,7 @@
 
 (define terrain
   '(let ((vertex positions-start)
-         (flingdamp (vector 0 0 0))
+         (flingdamp (vector 5 10 0))
          (world (vector 0 0 0)))
 
      ;; recycle a triangle which is off the screen
@@ -116,9 +116,12 @@
            (write! (+ vertex 514) n)
 
            ;; write the z height as texture coordinates
-           (write! (+ vertex 1536) (*v (swizzle zzz a) (vector 0 5 0)))          
-           (write! (+ vertex 1537) (*v (swizzle zzz b) (vector 0 5 0)))          
-           (write! (+ vertex 1538) (*v (swizzle zzz c) (vector 0 5 0))))))
+           (write! (+ vertex 1536) 
+                   (*v (swizzle zzz a) (vector 0 0.25 0)))          
+           (write! (+ vertex 1537) 
+                   (*v (swizzle zzz b) (vector 0 0.25 0)))          
+           (write! (+ vertex 1538) 
+                   (*v (swizzle zzz c) (vector 0 0.25 0))))))
 
      ;; forever
      (loop 1

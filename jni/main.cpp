@@ -21,6 +21,7 @@
 #include <iostream>
 #include <string>
 #include <png.h>
+#include <pthread.h>
 
 #include "engine/importgl.h"
 #include "core/fixed.h"
@@ -50,6 +51,7 @@ using namespace std;
 int w,h=0;
 int gAppAlive = 1;
 int modifiers = 0;
+pthread_mutex_t* render_mutex;
 
 unsigned char* LoadPNG(const string filename,long &width, long &height)
 {
@@ -278,6 +280,7 @@ void glMultMatrixx( GLfixed * mat )
 
 void DisplayCallback()
 {
+    pthread_mutex_lock(render_mutex);
 
 #ifdef FLX_RPI
   appRender(0, state->screen_width, state->screen_height);
@@ -295,6 +298,8 @@ void DisplayCallback()
         printf("running script\n");
         first=false;
     }
+
+	pthread_mutex_unlock(render_mutex);
 }
 
 #ifdef FLX_RPI
@@ -386,6 +391,18 @@ static void init_ogl_rpi(RPI_STATE_T *state)
 
 #endif
 
+void repl_loop() {
+    char cmd_str[80];
+    do {
+        printf("\n-> ");
+        fgets( cmd_str, 80, stdin );
+        pthread_mutex_lock(render_mutex);
+        appEval(cmd_str);
+        pthread_mutex_unlock(render_mutex);
+    } while(1);
+}
+
+
 int main(int argc, char *argv[])
 {
 #ifdef FLX_RPI
@@ -410,16 +427,16 @@ int main(int argc, char *argv[])
 	sprintf(windowtitle,"fluxus raspberry pi scratchpad");
 	glutCreateWindow(windowtitle);
 	glutDisplayFunc(DisplayCallback);
-	glutReshapeFunc(ReshapeCallback);
+/*	glutReshapeFunc(ReshapeCallback);
 	glutMouseFunc(MouseCallback);
 	glutMotionFunc(MotionCallback);
 	glutPassiveMotionFunc(PassiveMotionCallback);
-	glutIdleFunc(IdleCallback);
-	glutKeyboardFunc(KeyboardCallback);
+*/	glutIdleFunc(IdleCallback);
+/*	glutKeyboardFunc(KeyboardCallback);
 	glutSpecialFunc(SpecialKeyboardCallback);
 	glutKeyboardUpFunc(KeyboardUpCallback);
 	glutSpecialUpFunc(SpecialKeyboardUpCallback);
-
+*/
 #endif
 
 
@@ -450,6 +467,11 @@ int main(int argc, char *argv[])
     unsigned char *tex=LoadPNG("../assets/stripes.png",w,h);
     appLoadTexture("stripes.png",w,h,(char *)tex);
 
+
+	render_mutex = new pthread_mutex_t;
+	pthread_mutex_init(render_mutex,NULL);
+    pthread_t *repl_thread = new pthread_t; 
+    pthread_create(repl_thread,NULL,(void*(*)(void*))repl_loop,NULL);
 
 #ifdef FLX_RPI
   while (!terminate_prog)

@@ -36,9 +36,11 @@ void appInit()
 
     #ifdef FLX_LINUX
     FILE *log_file=stdout;
+    scheme_set_input_port_file(sc, stdin);
     #else
     #ifdef FLX_RPI
     FILE *log_file=stdout;
+    scheme_set_input_port_file(sc, stdin);
     #else
     FILE *log_file=fopen("/sdcard/jellyfish-log.txt","w");
     #endif
