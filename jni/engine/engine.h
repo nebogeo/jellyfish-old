@@ -47,6 +47,7 @@ public:
     void line_width(u32 w);
     void texture(u32 id);
     void clear();
+    void destroy(int id);
     void text_set(const char *str);
     mat44 *get_transform();
     mat44 get_global_transform();

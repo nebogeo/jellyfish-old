@@ -4311,6 +4311,9 @@ static pointer opexe_6(scheme *sc, enum scheme_opcodes op) {
           }
           s_return(sc,sc->F);
      }
+     case OP_DESTROY:
+          engine::get()->destroy(rvalue(car(sc->args)));
+          s_return(sc,sc->F);
      case OP_LINE_WIDTH:
           engine::get()->line_width(rvalue(car(sc->args)));
           s_return(sc,sc->F);

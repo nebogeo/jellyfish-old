@@ -138,6 +138,7 @@
                   ;; insert drops to ignore returned data
                   ;; from expressions in the list we're not
                   ;; using (must have side effects)
+                  ;; - keep last push
                   (emit (vector drp 0 0))
                   (emit-expr-list (cdr l))))))))
 
@@ -253,6 +254,7 @@
   (let ((block
          (append
           (emit-expr-list (cdr (cdr x)))
+          (emit (vector drp 0 0))
           (emit-expr (cadr x)))))
     (append
      block

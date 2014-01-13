@@ -33,9 +33,9 @@ scenegraph::~scenegraph()
     delete m_root;
 }
 
-void scenegraph::clear() 
-{ 
-    if (m_root!=NULL) 
+void scenegraph::clear()
+{
+    if (m_root!=NULL)
     {
         delete m_root;
         m_root=NULL;
@@ -44,7 +44,7 @@ void scenegraph::clear()
     m_root->m_id=0;
     m_current_id=1;
 
-    if (m_immediate_root!=NULL) 
+    if (m_immediate_root!=NULL)
     {
         delete m_immediate_root;
         m_immediate_root=NULL;
@@ -59,7 +59,7 @@ int scenegraph::add(int pid, scenenode *node)
     if (!parent) parent=m_root;
     node->m_id=m_current_id++;
     parent->m_children.add_to_front(node);
-    node->m_parent=parent;	
+    node->m_parent=parent;
     return node->m_id;
 }
 
@@ -68,13 +68,18 @@ void scenegraph::add_immediate(scenenode *node)
     scenenode *parent=m_immediate_root;
     node->m_id=9999;
     parent->m_children.add_to_front(node);
-    node->m_parent=parent;	
+    node->m_parent=parent;
 }
 
 void scenegraph::remove(int id)
 {
     scenenode *n=find(id);
-    if (n!=NULL) delete n;
+    if (n!=NULL) {
+        if (n->m_parent!=NULL){
+            n->m_parent->remove_child(id);
+        }
+        delete n;
+    }
 }
 
 scenenode *scenegraph::find(int id) const
@@ -127,7 +132,7 @@ void scenegraph::reparent(int id, int pid)
 
 	if (node==NULL) return;
 	if (new_parent==NULL) return;
-	
+
     scenenode *old_parent=node->m_parent;
 	old_parent->remove_child(id);
     new_parent->m_children.add_to_front(node);
@@ -137,7 +142,7 @@ void scenegraph::reparent(int id, int pid)
 bool scenegraph::is_attached_to(scenenode *parent, scenenode *child) const
 {
 /*	Node *current = Child;
-	
+
 	// iterate back up the tree looking at parents...
 	while(current!=NULL)
 	{
@@ -154,13 +159,13 @@ void scenegraph::render()
 {
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ZERO /*GL_ONE_MINUS_SRC_ALPHA*/);	
+    glBlendFunc(GL_SRC_ALPHA, GL_ZERO /*GL_ONE_MINUS_SRC_ALPHA*/);
 
     if (m_root!=NULL)
     {
         render_node_walk(m_root,1);
     }
-    
+
     // render immediate mode
     render_node_walk(m_immediate_root,1);
 
@@ -235,9 +240,9 @@ u32 scenegraph::intersect_node_walk(scenenode *node,  const vec3 &start, const v
     {
         // transform the line into local space
         mat44 inv=get_global_transform(node).inverse();
-        vec3 ls=inv.transform(start);        
-        vec3 le=inv.transform(end);        
-        
+        vec3 ls=inv.transform(start);
+        vec3 le=inv.transform(end);
+
         // run the intersection
         if (node->m_primitive->intersect_fast(ls,le))
         {

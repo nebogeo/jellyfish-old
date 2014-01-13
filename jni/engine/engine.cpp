@@ -368,6 +368,12 @@ void engine::clear()
     m_clear_a=1.0f;
 }
 
+void engine::destroy(int id)
+{
+    m_sg->remove(id);
+}
+
+
 void engine::text_set(const char *str)
 {
     if (grabbed())

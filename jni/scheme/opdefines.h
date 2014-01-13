@@ -231,6 +231,7 @@
     _OP_DEF(opexe_6, "get-screen-size",                0,  0,       0,                               OP_GET_SCREEN_SIZE  )
     _OP_DEF(opexe_6, "minverse",                       1,  1,       0,                               OP_MINVERSE )
     _OP_DEF(opexe_6, "bitwise-ior",                    3,  3,       0,                               OP_BITWISE_IOR )
+    _OP_DEF(opexe_6, "destroy",                        1,  1,       0,                               OP_DESTROY )
 
     _OP_DEF(opexe_6, "alog",                           1,  1,       TST_NONE,                        OP_ALOG             )
     _OP_DEF(opexe_6, "send",                           1,  1,       0,                               OP_SEND             )

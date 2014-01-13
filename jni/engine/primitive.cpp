@@ -108,7 +108,7 @@ primitive::primitive()
 
 primitive::~primitive()
 {
-    delete m_colours;
+    delete m_colours_;
 }
 
 void primitive::pdata_add(const char* name, vec3 *ptr)

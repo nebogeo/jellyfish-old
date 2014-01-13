@@ -41,7 +41,7 @@ public:
                     flx_real b, flx_real a);
     void apply(const mat44 &m);
     unsigned int pdata_size() { return m_size; }
-    void pdata_add(const char* name, vec3 *ptr);
+    virtual void pdata_add(const char* name, vec3 *ptr);
     vec3 *get_pdata_arr(const char* name);
     void pdata_set(const char* name, int i, vec3 v);
     vec3 *pdata_get(const char* name, int i);
