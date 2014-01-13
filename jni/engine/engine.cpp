@@ -18,6 +18,7 @@
 #include "text_primitive.h"
 #include "jellyfish/jellyfish_primitive.h"
 #include "fluxa/Graph.h"
+#include "obj_reader.h"
 
 #ifdef _EE
 #include "ee/ps2-renderer.h"
@@ -271,6 +272,57 @@ void engine::setup_state(scenenode *n)
 int engine::build_cube()
 {
     scenenode *n=new scenenode(new primitive());
+    setup_state(n);
+    return m_sg->add(state_top()->m_parent,n);
+}
+
+int engine::raw_obj(char *data)
+{
+    obj_reader reader;
+    reader.RawRead(data);
+    return build_obj(reader);
+}
+
+int engine::load_obj(char *fn)
+{
+    obj_reader reader;
+    reader.FormatRead(fn);
+    return build_obj(reader);
+}
+
+int engine::build_obj(obj_reader &reader)
+{
+    primitive *p = new primitive(reader.m_Indices.size(),primitive::TRIANGLES);
+    p->build();
+
+    if (reader.m_Faces[0].Index.size()!=3) {
+        printf("non triangular faces, trouble...\n");
+    }
+
+    // copy stuff from reader to primitive
+    // super slow but should only happen at load time?
+    for (int i=0; i<p->pdata_size(); ++i)
+    {
+        p->pdata_set("p",i,reader.m_Position[reader.m_Indices[i]]);
+    }
+
+    if (reader.m_Normal.size()>0)
+    {
+        for (int i=0; i<p->pdata_size(); ++i)
+        {
+            p->pdata_set("n",i,reader.m_Normal[reader.m_Indices[i]]);
+        }
+    }
+
+    if (reader.m_Texture.size()>0)
+    {
+        for (int i=0; i<p->pdata_size(); ++i)
+        {
+            p->pdata_set("t",i,reader.m_Texture[reader.m_Indices[i]]);
+        }
+    }
+
+    scenenode *n=new scenenode(p);
     setup_state(n);
     return m_sg->add(state_top()->m_parent,n);
 }

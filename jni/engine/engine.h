@@ -21,6 +21,8 @@ class Graph;
 #ifndef FLX_ENGINE
 #define FLX_ENGINE
 
+class obj_reader;
+
 class engine
 {
 public:
@@ -59,6 +61,9 @@ public:
     void pdata_set(const char *name, int i, vec3 v);
 
     int build_cube();
+    int load_obj(char *fn);
+    int raw_obj(char *data);
+    int build_obj(obj_reader &reader);
     int build_text(char *str);
     int build_polygons(unsigned int size, int type);
     int build_jellyfish(u32 size);

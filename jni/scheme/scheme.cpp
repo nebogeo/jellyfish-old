@@ -4321,6 +4321,10 @@ static pointer opexe_6(scheme *sc, enum scheme_opcodes op) {
           s_return(sc,mk_integer(sc,engine::get()->get_texture(string_value(car(sc->args)))));
      case OP_BUILD_CUBE:
          s_return(sc,mk_integer(sc,engine::get()->build_cube()));
+     case OP_LOAD_OBJ:
+         s_return(sc,mk_integer(sc,engine::get()->load_obj(string_value(car(sc->args)))));
+     case OP_RAW_OBJ:
+         s_return(sc,mk_integer(sc,engine::get()->raw_obj(string_value(car(sc->args)))));
      case OP_BUILD_TEXT:
          s_return(sc,mk_integer(sc,engine::get()->build_text(
                                      string_value(car(sc->args)))));

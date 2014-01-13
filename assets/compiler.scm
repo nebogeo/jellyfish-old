@@ -6,7 +6,7 @@
 (define nop 0) (define jmp 1) (define jmz 2) (define jlt 3) (define jgt 4)
 (define ldl 5) (define lda 6) (define ldi 7) (define sta 8) (define sti 9)
 (define add 10) (define sub 11) (define mul 12) (define div 13) (define abs 14)
-(define _sin 15) (define atn 16) (define dot 17) (define crs 18) (define sqr 19)
+(define sincos 15) (define atn 16) (define dot 17) (define crs 18) (define sqr 19)
 (define len 20) (define dup 21) (define drp 22) (define cmp 23) (define shf 24)
 (define bld 25) (define ret 26) (define _dbg 27) (define nrm 28)
 (define add.x 29) (define add.y 30) (define add.z 31) (define end-check 999)
@@ -14,10 +14,10 @@
 (define lensq 37) (define noise 38) (define lds 39) (define sts 40) (define mulv 41)
 (define synth-crt 42) (define synth-con 43) (define synth-ply 44) (define flr 45)
 
-(define instr 
+(define instr
   '(nop jmp jmz jlt jgt ldl lda ldi sta sti
-        add sub mul div abs _sin atn dot crs 
-        sqr len dup drp cmp shf bld ret dbg 
+        add sub mul div abs scs atn dot crs
+        sqr len dup drp cmp shf bld ret dbg
         nrm add.x add.y add.z swp rnd mull
         jmr ldlv lensq noise lds sts mulv
         synth-crt synth-con synth-ply flr))
@@ -28,7 +28,16 @@
 (define prim-lines 3)
 (define prim-linestrip 4)
 
-(define reg-fling 3)
+;; registers
+(define reg-control 0) ;; pc, cycles, stack
+(define reg-graphics 1) ;; size, primtype, hints
+(define reg-tx-translate 2)
+(define reg-tx-rotatea 3)
+(define reg-tx-rotateb 4)
+(define reg-tx-rotatec 5)
+(define reg-fling 6)
+(define reg-code-start 7)
+
 (define emit list)
 
 ;; variables are just an address lookup table
@@ -39,13 +48,13 @@
         (set! variables (append variables (list name)))))
 
 (define (variable-address name)
-  (define (_ l c)   
+  (define (_ l c)
     (cond
      ((null? l) (msg "cant find variable " name) #f)
      ((equal? name (car l)) c)
      (else (_ (cdr l) (+ c 1)))))
-  ;; 4 is starting address after registers
-  (_ variables 4)) 
+  ;; code-start is address after registers
+  (_ variables reg-code-start))
 
 ;; variables are just an address lookup table
 (define function-code '())
@@ -82,11 +91,17 @@
      ;; if a memory segment constant is found
      (seg (emit (vector ldl seg 0)))
      ;; other constants
-     ((eq? name 'reg-fling) (emit (vector ldl 3 0)))
+     ((eq? name 'reg-control) (emit (vector ldl reg-control 0)))
+     ((eq? name 'reg-graphics) (emit (vector ldl reg-graphics 0)))
+     ((eq? name 'reg-tx-translate) (emit (vector ldl reg-tx-translate 0)))
+     ((eq? name 'reg-tx-rotatea) (emit (vector ldl reg-tx-rotatea 0)))
+     ((eq? name 'reg-tx-rotateb) (emit (vector ldl reg-tx-rotateb 0)))
+     ((eq? name 'reg-tx-rotatec) (emit (vector ldl reg-tx-rotatec 0)))
+     ((eq? name 'reg-fling) (emit (vector ldl reg-fling 0)))
      ;; load variable
-     (else 
+     (else
       (emit (vector lda (variable-address name) 0))))))
-  
+
 ;; create empty space for variable data
 (define (variables->data)
   (map
@@ -114,16 +129,16 @@
 
 ;; append a bunch of expressions
 (define (emit-expr-list l)
-  (cond 
+  (cond
     ((null? l) '())
-    (else 
+    (else
      (append (emit-expr (car l))
              (if (null? (cdr l)) '()
                  (append
                   ;; insert drops to ignore returned data
                   ;; from expressions in the list we're not
                   ;; using (must have side effects)
-                  (emit (vector drp 0 0)) 
+                  (emit (vector drp 0 0))
                   (emit-expr-list (cdr l))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -132,7 +147,7 @@
 (define (emit-set! x)
   (append
    (emit-expr (caddr x))
-   (emit 
+   (emit
     (vector sta (variable-address (cadr x)) 0))
    (emit (vector ldl 0 0))))
 
@@ -150,7 +165,7 @@
 
 (define (emit-cond-part x)
   (let ((block (emit-expr-list (cdr x))))
-    (append 
+    (append
      (emit-expr (car x))
      (emit (vector jmz (+ (length block) 1) 0))
      block)))
@@ -159,7 +174,7 @@
   (define (_ l)
     (cond
      ((null? l) '())
-     (else (append (emit-cond-part (car l)) 
+     (else (append (emit-cond-part (car l))
                    (_ (cdr l))))))
   (_ (cdr x)))
 
@@ -167,17 +182,17 @@
   (let ((args (emit-expr-list (cdr x))))
     (append
      ;; offset from here -> stitch up in second pass
-     (emit (list 'add-abs-loc 'this 1 
-                 (vector ldl (+ (length args) 3) 0))) 
+     (emit (list 'add-abs-loc 'this 1
+                 (vector ldl (+ (length args) 3) 0)))
      args ;; push arguments to stack
      (emit (vector lda addr 0)) ;; fn ptr is in data mem
      (emit (vector ret 0 0))))) ;; jump to fn
 
 ;; lambda args body
 (define (emit-lambda x)
-  (let* ((body 
+  (let* ((body
           (append
-           (map 
+           (map
             (lambda (arg)
               ;; for moment use global pile for arguments :O
               (make-variable! arg)
@@ -186,16 +201,16 @@
            ;; now args are loaded, do body
            (emit-expr-list (cddr x))
            ;; swap ret ptr to top
-           (emit (vector swp 0 0)) 
+           (emit (vector swp 0 0))
            (emit (vector ret 0 0))))
          (loc (make-function! body)))
     (append
      (if debug (emit (list "function code...")) '())
-     (emit 
+     (emit
       ;; offset from function code -> stitch up in linking pass
-       (list 'add-abs-loc 'function-code 1 
+       (list 'add-abs-loc 'function-code 1
             (vector ldl loc 0))))))
-   
+
 (define (emit-define x)
   (make-variable! (cadr x))
   (append
@@ -213,7 +228,7 @@
   (define (_ l)
     (cond
      ((null? l) '())
-     (else (append (emit-let-part (car l)) 
+     (else (append (emit-let-part (car l))
                    (_ (cdr l))))))
   (append
    (_ (cadr x))
@@ -235,7 +250,7 @@
 
 ;(loop pred block)
 (define (emit-loop x)
-  (let ((block 
+  (let ((block
          (append
           (emit-expr-list (cdr (cdr x)))
           (emit-expr (cadr x)))))
@@ -245,13 +260,13 @@
      (emit (vector jmr (- (+ (length block) 1)) 0))
      )))
 
-(define (binary-procedure proc x) 
+(define (binary-procedure proc x)
   (append
    (emit-expr (cadr x))
    (emit-expr (caddr x))
    (emit (vector proc 0 0))))
 
-(define (unary-procedure proc x) 
+(define (unary-procedure proc x)
   (append
    (emit-expr (cadr x))
    (emit (vector proc 0 0))))
@@ -307,9 +322,9 @@
   (append
    (emit-expr (caddr x))
    (emit (vector ldlv 0 0))
-   (cond 
+   (cond
     ((eq? (cadr x) 'xxx) (emit (vector 0 0 0)))
-    ((eq? (cadr x) 'xxy) (emit (vector 0 0 1)))  
+    ((eq? (cadr x) 'xxy) (emit (vector 0 0 1)))
     ((eq? (cadr x) 'xxz) (emit (vector 0 0 2)))
     ((eq? (cadr x) 'xyx) (emit (vector 0 1 0)))
     ((eq? (cadr x) 'xyy) (emit (vector 0 1 1)))
@@ -363,7 +378,9 @@
     ((eq? (car x) 'normalise) (unary-procedure nrm x))
     ((eq? (car x) 'abs) (unary-procedure abs x))
     ((eq? (car x) 'floor) (unary-procedure flr x))
-    ((eq? (car x) 'round) 
+    ((eq? (car x) 'sincos) (unary-procedure sincos x))
+    ((eq? (car x) 'ignore) (unary-procedure drp x))
+    ((eq? (car x) 'round)
      (append
       (emit-expr (cadr x))
       (emit (vector ldlv 0 0))
@@ -383,7 +400,7 @@
     ((eq? (car x) 'synth-create) (emit-synth-create x))
     ((eq? (car x) 'synth-connect) (emit-synth-connect x))
     ((eq? (car x) 'synth-play) (emit-synth-play x))
-    (else 
+    (else
      (let ((addr (variable-address (car x))))
        (if addr
            (emit-fncall x addr)
@@ -391,14 +408,14 @@
              (msg "unknown function: " x) '()))))))
 
 (define (emit-expr x)
-  (cond 
+  (cond
    ((immediate? x) (emit-push x))
    ((primcall? x)
     (append
-     (if debug 
+     (if debug
          (list (string-append "starting " (symbol->string (car x))))
-         '())     
-     (cond 
+         '())
+     (cond
       ((eq? (car x) 'let) (emit-let x))
       ((eq? (car x) 'define) (emit-define x))
       ((eq? (car x) 'cond) (emit-cond x))
@@ -409,20 +426,23 @@
          (list (string-append "ending " (symbol->string (car x))))
          '())
      ))
-   (else 
+   (else
     (msg "don't understand " x) '())))
 
 (define (header code-start cycles prim hints)
   (list
    (vector code-start cycles 0) ;; control (pc, cycles, stack)
    (vector 512 prim hints) ;; graphics
-   (vector 0 0 0) ;; pos
-   (vector 0 0 0))) ;; sensor
+   (vector 0 0 0) ;; translate
+   (vector 1 0 0) ;; rota
+   (vector 0 1 0) ;; rotb
+   (vector 0 0 1) ;; rotc
+   (vector 0 0 0))) ;; fling
 
 (define (link-add code addr)
   (let ((v (list-ref code 3)))
     (vector-set! v (list-ref code 2)
-                 (+ (vector-ref v (list-ref code 2)) 
+                 (+ (vector-ref v (list-ref code 2))
                     addr))
     v))
 
@@ -430,11 +450,11 @@
   (cond
    ((eq? (car code) 'add-abs-loc)
     (cond
-     ((eq? (cadr code) 'this) 
+     ((eq? (cadr code) 'this)
       (link-add code pc))
-     ((eq? (cadr code) 'function-code) 
+     ((eq? (cadr code) 'function-code)
       (link-add code function-start))
-     (else 
+     (else
       (msg "link offset unhandled:" code))))
    (else
     (msg "link type unhandled:" code))))
@@ -448,7 +468,7 @@
      (link-program (cdr code) function-start (+ pc 1))))
    (else
     (cons
-     (car code) 
+     (car code)
      (link-program (cdr code) function-start (+ pc 1))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -456,7 +476,7 @@
 (define aid 0)
 (define (new-aid) (set! aid (+ aid 1)) aid)
 
-(define synth-ops 
+(define synth-ops
   '(sine saw tri squ white pink adsr add sub mul div pow
          mooglp moogbp mooghp formant crush distort clip
          delay ks xfade samplenhold tracknhold))
@@ -476,15 +496,15 @@
       (append
        (list (list 'synth-create (list 'vector id 0 x)))
        (list (list 'synth-connect (list 'vector parent argn id)))))
-     (else  
+     (else
       (let ((argc -1))
         (append
          (list (list 'synth-create (list 'vector id (get-opn (car x)) 0)))
-         (if (zero? parent) 
-             '() 
+         (if (zero? parent)
+             '()
              (list (list 'synth-connect (list 'vector parent argn id))))
          (foldl
-          (lambda (c r) 
+          (lambda (c r)
             (set! argc (+ argc 1))
             (append
              (synth-operator id argc c)
@@ -493,7 +513,7 @@
           (cdr x))))))))
 
 
-;; basically diy-macro from the main tinyscheme stuff           
+;; basically diy-macro from the main tinyscheme stuff
 (define (pre-process s)
   (cond
     ((null? s) s)
@@ -503,7 +523,7 @@
         (if (and (list? i) (not (null? i)))
             ;; dispatch to macro processors
             (cond
-             ((eq? (car i) 'play-now) 
+             ((eq? (car i) 'play-now)
               (dbg (append
                (list 'do)
                (synth-operator 0 0 (cadr i))
@@ -516,18 +536,18 @@
 (define (compile-program cycles prim hints x)
   (let* ((code (emit-expr (pre-process x)))
          (data (variables->data))
-         (function-start (+ 4 (length data)))
-         (out 
+         (function-start (+ reg-code-start (length data)))
+         (out
           (link-program
            (append
-            (header (+ 4 (length data) 
-                       (length function-code)) 
+            (header (+ reg-code-start (length data)
+                       (length function-code))
                     cycles prim hints)
             data
             function-code
             code)
            function-start 0)))
-    ;;(msg "code is as follows") 
+    ;;(msg "code is as follows")
     ;;(disassemble out)
     (msg "length is" (length out))
     out))
@@ -537,11 +557,14 @@
   (for-each
    (lambda (i)
      (display ln)(display ": ")
-     (cond 
+     (cond
       ((vector? i)
-       (if (and (>= (vector-ref i 0) 0) 
+
+       (if (and (>= (vector-ref i 0) 0)
                 (< (vector-ref i 0) (length instr)))
-           (display (list-ref instr (inexact->exact (round (vector-ref i 0)))))
+           (begin
+             (display (list-ref instr (inexact->exact (round (vector-ref i 0)))))
+             (display (string-append "(" (number->string (vector-ref i 0)) ")")))
            (display (vector-ref i 0)))
        (display " ")(display (vector-ref i 1))
        (display " ")(display (vector-ref i 2))(newline))
@@ -549,4 +572,3 @@
       (else (display ";; ")(display i)(newline)))
      (set! ln (+ ln 1)))
    code))
-

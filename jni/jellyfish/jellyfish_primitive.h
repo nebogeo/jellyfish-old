@@ -33,6 +33,7 @@ public:
 
 private:
     jellyfish *m_machine;
+    mat44 m_internal_tx;
 };
 
 #endif

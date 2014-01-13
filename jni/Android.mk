@@ -25,6 +25,7 @@ LOCAL_SRC_FILES := \
 	engine/scenegraph.cpp \
 	engine/texture.cpp \
     engine/importgl.c \
+	engine/obj_reader.cpp \
     engine/nomadic.cpp \
 	engine/engine.cpp \
 	scheme/scheme.cpp \

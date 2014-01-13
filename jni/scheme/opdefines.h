@@ -210,6 +210,8 @@
     _OP_DEF(opexe_6, "texture",                        1,  1,       0,                               OP_TEXTURE          )
     _OP_DEF(opexe_6, "load-texture",                   1,  1,       0,                               OP_LOAD_TEXTURE     )
     _OP_DEF(opexe_6, "build-cube",                     0,  0,       0,                               OP_BUILD_CUBE       )
+    _OP_DEF(opexe_6, "load-obj",                       1,  1,       0,                               OP_LOAD_OBJ         )
+    _OP_DEF(opexe_6, "raw-obj",                        1,  1,       0,                               OP_RAW_OBJ          )
     _OP_DEF(opexe_6, "build-polygons",                 2,  2,       0,                               OP_BUILD_POLYGONS   )
     _OP_DEF(opexe_6, "build-text",                     1,  1,       0,                               OP_BUILD_TEXT       )
     _OP_DEF(opexe_6, "build-jellyfish",                1,  1,       0,                               OP_BUILD_JELLYFISH  )

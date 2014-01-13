@@ -125,7 +125,7 @@ void jellyfish::run()
     // load from address on the stack
  	case LDS: push(peek((int)pop().x)); break;
     case LDLV:
-    { 
+    {
         push(peek(pc+1));
         pokex(REG_CONTROL,peekix(REG_CONTROL)+1);
     } break;
@@ -171,11 +171,13 @@ void jellyfish::run()
             push(vec3(0,0,0));
         }
     } break;
-	case ABS: { vec3 t=pop(); push(vec3(fabs((float)t.x),
-                                        fabs((float)t.y),
-                                        fabs((float)t.z))); } break;
-	case SIN: { flx_real a=pop().x; push(vec3(sin(((float)a)*0.0174532925),
-                                              cos(((float)a)*0.0174532925),0));
+	case ABS: { vec3 t=pop();
+        push(vec3(fabs((float)t.x),
+                  fabs((float)t.y),
+                  fabs((float)t.z))); } break;
+	case SCS: { flx_real a=pop().x;
+        push(vec3(sin(((float)a)*0.0174532925),
+                  cos(((float)a)*0.0174532925),0));
     } break;
 	case ATN: ; break;
 	case DOT: push(vec3(pop().dot(pop()),0,0)); break;
@@ -212,7 +214,7 @@ void jellyfish::run()
 	case RET: {
         int addr=(int)pop().x-1;
         //printf("RET to %d\n",addr);
-        pokex(REG_CONTROL,addr); 
+        pokex(REG_CONTROL,addr);
     } break;
 	case DBG:
     {
@@ -245,7 +247,7 @@ void jellyfish::run()
 
  	case SYNTH_CRT:
     {
-        vec3 v=pop();        
+        vec3 v=pop();
         m_audio_graph->Create((int)v.x, (Graph::Type)((int)v.y), v.z);
     } break;
  	case SYNTH_CON:
@@ -366,7 +368,7 @@ void jellyfish::print_instr(s32 addr) const
         case MUL: printf("mul"); break;
         case DIV: printf("div"); break;
         case ABS: printf("abs"); break;
-        case SIN: printf("sin"); break;
+        case SCS: printf("scs"); break;
         case ATN: printf("atn"); break;
         case DOT: printf("dot"); break;
         case CRS: printf("crs"); break;

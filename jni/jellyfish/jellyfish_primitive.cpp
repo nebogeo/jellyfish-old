@@ -64,6 +64,29 @@ void jellyfish_primitive::render(u32 hints)
 {
     execute();
 
+    vec3 t=m_machine->peek(REG_TX_TRANSLATE);
+    m_internal_tx.m[3][0]=t.x;
+    m_internal_tx.m[3][1]=t.y;
+    m_internal_tx.m[3][2]=t.z;
+
+    t=m_machine->peek(REG_TX_ROTATEA);
+    m_internal_tx.m[0][0]=t.x;
+    m_internal_tx.m[0][1]=t.y;
+    m_internal_tx.m[0][2]=t.z;
+
+    t=m_machine->peek(REG_TX_ROTATEB);
+    m_internal_tx.m[1][0]=t.x;
+    m_internal_tx.m[1][1]=t.y;
+    m_internal_tx.m[1][2]=t.z;
+
+    t=m_machine->peek(REG_TX_ROTATEC);
+    m_internal_tx.m[2][0]=t.x;
+    m_internal_tx.m[2][1]=t.y;
+    m_internal_tx.m[2][2]=t.z;
+
+    // wheee!
+    glMultMatrixx((GLfixed*)&m_internal_tx.m[0][0]);
+
     switch (m_machine->peekiy(REG_GRAPHICS))
     {
     case TRIANGLES: m_type=GL_TRIANGLES; break;

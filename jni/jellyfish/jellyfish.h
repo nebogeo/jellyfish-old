@@ -40,7 +40,7 @@
 #define MUL 12
 #define DIV 13
 #define ABS 14
-#define SIN 15
+#define SCS 15
 #define ATN 16
 #define DOT 17
 #define CRS 18
@@ -75,10 +75,14 @@
 // registers
 #define REG_CONTROL 0   // pc, cycles, stack
 #define REG_GRAPHICS 1  // size, [type, tex]
-#define REG_POSITION 2
-#define REG_SENSOR_ADDR 3
-#define REG_STK 511
-#define REG_MDL 512
+#define REG_TX_TRANSLATE 2
+#define REG_TX_ROTATEA 3
+#define REG_TX_ROTATEB 4
+#define REG_TX_ROTATEC 5
+#define REG_SENSOR_ADDR 6
+#define CODE_START 7
+
+#define REG_STK 511 // oops hardcoded :/
 
 class jellyfish {
 
