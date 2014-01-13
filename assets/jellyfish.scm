@@ -70,7 +70,8 @@
 
 (define obj-test
   '(let ((t 0)
-         (v 0))
+         (v 0)
+         (anim 0))
 
      (define rotx
        (lambda (a)
@@ -94,18 +95,19 @@
                  (+ (read reg-tx-translate)
                     (* (read reg-tx-rotatea) speed)))))
 
+     (define blend
+       (lambda (anim)
+         (set! v positions-start)
+         (loop (< v positions-end)
+               (write! v (+ (* (read (+ v 1024)) anim)
+                            (* (read (+ v 1536)) (- anim 1))))
+               (set! v (+ v 1)))))
+
      (loop 1
-           (roty t)
-           (rotz t)
-           (move-along-y 0.03)
-           (define anim (* (abs (sincos (* t 10))) 1.5))
-
-           (set! v positions-start)
-           (loop (< v positions-end)
-                 (write! v (+ (* (read (+ v 1024)) anim)
-                              (* (read (+ v 1536)) (- anim 1))))
-                 (set! v (+ v 1)))
-
+           (roty (* t 8))
+           (move-along-y 0.2)
+           (set! anim (* (abs (sincos (* t 30))) 1.5))
+           (blend anim)
            (set! t (+ t 1))
            )))
 
@@ -164,11 +166,11 @@
 
            ;; write the z height as texture coordinates
            (write! (+ vertex 1536)
-                   (*v (swizzle zzz a) (vector 0 0.1 0)))
+                   (*v (swizzle zzz a) (vector 0 4 0)))
            (write! (+ vertex 1537)
-                   (*v (swizzle zzz b) (vector 0 0.1 0)))
+                   (*v (swizzle zzz b) (vector 0 4 0)))
            (write! (+ vertex 1538)
-                   (*v (swizzle zzz c) (vector 0 0.1 0))))))
+                   (*v (swizzle zzz c) (vector 0 4 0))))))
 
      ;; forever
      (loop 1
@@ -225,10 +227,10 @@
   (set! jelly (build-jellyfish 512))
   (set! jelly2 (build-jellyfish 512))
 
-;  (with-primitive
-;   jelly
-;   (terrain-setup)
-;   (jelly-compiled (compile-program 10000 prim-triangles 1 terrain)))
+  (with-primitive
+   jelly
+   (terrain-setup)
+   (jelly-compiled (compile-program 10000 prim-triangles 1 terrain)))
 
   (define s1 (raw-obj (list-ref spider 0)))
   (define s2 (raw-obj (list-ref spider 1)))
@@ -238,7 +240,7 @@
 
   (with-primitive
    jelly2
-   (scale (vector 0.5 0.5 0.5))
+   (scale (vector 0.1 0.1 0.1))
    (pdata-index-map! (lambda (i p) (with-primitive s2 (pdata-ref "p" i))) "p")
    (pdata-index-map! (lambda (i p) (with-primitive s2 (pdata-ref "p" i))) "t")
    (pdata-index-map! (lambda (i p) (with-primitive s3 (pdata-ref "p" i))) "c")
@@ -247,7 +249,7 @@
 ;;   (pdata-index-map! (lambda (i n) (with-primitive s2 (pdata-ref "n" i))) "n2")
 ;;   (pdata-index-map! (lambda (i n) (with-primitive s3 (pdata-ref "n" i))) "n3")
 
-   (let ((p (compile-program 10000 prim-triangles 1 obj-test)))
+   (let ((p (compile-program 1000 prim-triangles 1 obj-test)))
      (disassemble p)
      (jelly-compiled p)
      ))
@@ -257,15 +259,15 @@
   (destroy s2)
   (destroy s3)
 
-  ;(every-frame
-  ; (begin
-  ;   (with-primitive
-  ;    jelly 0
-  ;    (pdata-set! "x" reg-fling (vector (vx _fling) (vy _fling) 0)))
-  ;                                      ;(with-primitive
-  ;                                      ; jelly2 0
-  ;                                      ; (pdata-set! "x" reg-fling (vector (vx _fling) (vy _fling) 0)))
-  ;   ))
+  (every-frame
+   (begin
+     (with-primitive
+      jelly 0
+      (pdata-set! "x" reg-fling (vector (vx _fling) (vy _fling) 0)))
+                                        ;(with-primitive
+                                        ; jelly2 0
+                                        ; (pdata-set! "x" reg-fling (vector (vx _fling) (vy _fling) 0)))
+     ))
   )
 
 

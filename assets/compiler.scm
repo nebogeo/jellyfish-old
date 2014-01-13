@@ -260,6 +260,7 @@
      block
      (emit (vector jmz 2 0))
      (emit (vector jmr (- (+ (length block) 1)) 0))
+     (emit (vector ldl 0 0))
      )))
 
 (define (binary-procedure proc x)

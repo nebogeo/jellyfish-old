@@ -30,10 +30,10 @@
   (set! jelly (build-jellyfish 512))
   (set! jelly2 (build-jellyfish 512))
 
-;  (with-primitive
-;   jelly
-;   (terrain-setup)
-;   (jelly-compiled (compile-program 10000 prim-triangles 1 terrain)))
+  (with-primitive
+   jelly
+   (terrain-setup)
+   (jelly-compiled (compile-program 10000 prim-triangles 1 terrain)))
 
   (define s1 (raw-obj (list-ref spider 0)))
   (define s2 (raw-obj (list-ref spider 1)))
@@ -43,7 +43,7 @@
 
   (with-primitive
    jelly2
-   (scale (vector 0.5 0.5 0.5))
+   (scale (vector 0.2 0.2 0.2))
    (pdata-index-map! (lambda (i p) (with-primitive s2 (pdata-ref "p" i))) "p")
    (pdata-index-map! (lambda (i p) (with-primitive s2 (pdata-ref "p" i))) "t")
    (pdata-index-map! (lambda (i p) (with-primitive s3 (pdata-ref "p" i))) "c")
@@ -52,7 +52,7 @@
 ;;   (pdata-index-map! (lambda (i n) (with-primitive s2 (pdata-ref "n" i))) "n2")
 ;;   (pdata-index-map! (lambda (i n) (with-primitive s3 (pdata-ref "n" i))) "n3")
 
-   (let ((p (compile-program 10000 prim-triangles 1 obj-test)))
+   (let ((p (compile-program 2000 prim-triangles 1 obj-test)))
      (disassemble p)
      (jelly-compiled p)
      ))
@@ -62,27 +62,15 @@
   (destroy s2)
   (destroy s3)
 
-  ;(every-frame
-  ; (begin
-  ;   (with-primitive
-  ;    jelly 0
-  ;    (pdata-set! "x" reg-fling (vector (vx _fling) (vy _fling) 0)))
-  ;                                      ;(with-primitive
-  ;                                      ; jelly2 0
-  ;                                      ; (pdata-set! "x" reg-fling (vector (vx _fling) (vy _fling) 0)))
-  ;   ))
-
-
-
-
-
-
-
-
-
-
-
-
+  (every-frame
+   (begin
+     (with-primitive
+      jelly 0
+      (pdata-set! "x" reg-fling (vector (vx _fling) (vy _fling) 0)))
+                                        ;(with-primitive
+                                        ; jelly2 0
+                                        ; (pdata-set! "x" reg-fling (vector (vx _fling) (vy _fling) 0)))
+     ))
 
               ))
    (lambda (activity arg)
