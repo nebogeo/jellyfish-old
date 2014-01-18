@@ -2,13 +2,13 @@ env = Environment(CCFLAGS='-O0 -std=gnu++0x -ggdb -DUSE_MATH=1 -fpermissive -Wno
 target = ARGUMENTS.get('TARGET','LINUX')
 
 if target=='LINUX':
-   env.Append(LIBS = ['glut', 'GL', 'png'])
+   env.Append(LIBS = ['glut', 'GL', 'png', 'lo'])
    env.Append(CCFLAGS=' -DFLX_LINUX')
    env.Append(CPPPATH = '.')
 
 if target=='RPI':
    # raspberry pi
-   env.Append(LIBS = ['glutes', 'GLESv1_CM', 'EGL', 'bcm_host', 'X11', 'png'])
+   env.Append(LIBS = ['glutes', 'GLESv1_CM', 'EGL', 'bcm_host', 'X11', 'png', 'lo'])
    env.Append(CCFLAGS=' -DFLX_RPI -fpermissive')
    env.Append(CPPPATH = '/opt/vc/include/interface/vcos/pthreads/:/opt/vc/include/interface/vmcs_host/linux:/opt/vc/include/:.')
    env.Append(LIBPATH = '/opt/vc/lib')

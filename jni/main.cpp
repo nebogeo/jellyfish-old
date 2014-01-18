@@ -23,6 +23,8 @@
 #include <png.h>
 #include <pthread.h>
 
+#include <lo/lo.h>
+
 #include "engine/importgl.h"
 #include "core/fixed.h"
 #include "app.h"
@@ -402,6 +404,40 @@ void repl_loop() {
     } while(1);
 }
 
+/////////////// osc stuff ////////////////////////////////////////////////
+
+void osc_error_handler(int num, const char *msg, const char *path)
+{
+    printf("liblo server error %d in path %s\n",num,path);
+}
+
+int osc_default_handler(const char *path, const char *types, lo_arg **argv, int argc, void *data, void *user_data)
+{
+    //printf("osc server no handler for: %s %s\n",path,types);
+	return 1;
+}
+
+int osc_eval_handler(const char *path, const char *types, lo_arg **argv,
+		    int argc, void *data, void *user_data)
+{
+    if (types[0]=='s') {
+        printf("%s\n",argv[0]);
+        pthread_mutex_lock(render_mutex);
+        appEval((char*)argv[0]);
+        pthread_mutex_unlock(render_mutex);
+    }
+	return 1;
+}
+
+void setup_osc_repl() {
+    printf("running osc server\n");
+	lo_server_thread server = lo_server_thread_new("8000", osc_error_handler);
+    lo_server_thread_add_method(server, NULL, NULL, osc_default_handler, NULL);
+    lo_server_thread_add_method(server, "/eval", "s", osc_eval_handler, NULL);
+	lo_server_thread_start(server);
+}
+
+/////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char *argv[])
 {
@@ -453,7 +489,7 @@ int main(int argc, char *argv[])
     appEval((char*)string("(pre-process-run '("+LoadFile("../assets/jellyfish.scm")+"))").c_str());
 
 //    appEval((char*)string("(pre-process-run '((setup)))").c_str());
-  
+
     long w=0,h=0;
     //unsigned char *tex=LoadPNG("material/textures/font.png",w,h);
     //appLoadTexture("font.png",w,h,(char *)tex);
@@ -467,11 +503,13 @@ int main(int argc, char *argv[])
     unsigned char *tex=LoadPNG("../assets/stripes.png",w,h);
     appLoadTexture("stripes.png",w,h,(char *)tex);
 
-
+    // setup the repl thread
 	render_mutex = new pthread_mutex_t;
 	pthread_mutex_init(render_mutex,NULL);
-    pthread_t *repl_thread = new pthread_t; 
+    pthread_t *repl_thread = new pthread_t;
     pthread_create(repl_thread,NULL,(void*(*)(void*))repl_loop,NULL);
+
+    setup_osc_repl();
 
 #ifdef FLX_RPI
   while (!terminate_prog)

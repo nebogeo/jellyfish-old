@@ -227,10 +227,10 @@
   (set! jelly (build-jellyfish 512))
   (set! jelly2 (build-jellyfish 512))
 
-  (with-primitive
-   jelly
-   (terrain-setup)
-   (jelly-compiled (compile-program 10000 prim-triangles 1 terrain)))
+  ;(with-primitive
+  ; jelly
+  ; (terrain-setup)
+  ; (jelly-compiled (compile-program 10000 prim-triangles 1 terrain)))
 
   (define s1 (raw-obj (list-ref spider 0)))
   (define s2 (raw-obj (list-ref spider 1)))
@@ -250,9 +250,10 @@
 ;;   (pdata-index-map! (lambda (i n) (with-primitive s3 (pdata-ref "n" i))) "n3")
 
    (let ((p (compile-program 1000 prim-triangles 1 obj-test)))
-     (disassemble p)
+;     (disassemble p)
      (jelly-compiled p)
-     ))
+     )
+   )
 
 
   (destroy s1)
@@ -1026,4 +1027,4 @@ f 11//83 13//83 14//83"
               ))
 
 
-;(jelly-setup2)
+(jelly-setup2)
